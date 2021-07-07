@@ -43,13 +43,13 @@ end
     solution.φ
 end
 
-@recipe function f(solution::MovingWindowSolution; vars = nothing)
-    framestyle  --> :box
-    legend      --> :none
-    seriestype  --> :path
-    M = length(solution)
-    for m in 1:M
-        vars    --> vars
-        @series solution[m]
-    end
-end
+# @recipe function f(solution::MovingWindowSolution; vars = nothing)
+#     framestyle  --> :box
+#     legend      --> :none
+#     seriestype  --> :path
+#     M = length(solution)
+#     for m in 1:M
+#         vars    --> vars
+#         @series solution[m]
+#     end
+# end
