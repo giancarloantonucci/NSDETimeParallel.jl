@@ -5,7 +5,6 @@
         @series iterate[n]
     end
     # solves a bug in Plots
-    # widen   --> false
     primary := false
     ()
 end
@@ -15,6 +14,8 @@ end
     legend         --> :none
     gridalpha      --> 0.2
     linewidth      --> 1.5
+    minorgrid      --> 0.1
+    minorgridstyle --> :dash
     seriestype     --> :path
     xwiden         --> false
     tick_direction --> :out
@@ -29,12 +30,16 @@ end
     elseif h.args[1] isa TimeParallelSolution
         solution = h.args[1]
     end
-    framestyle  --> :box
-    legend      --> :none
-    linewidth   --> 1.5
-    markershape --> :circle
-    markersize  --> 3
-    seriestype  --> :path
+    framestyle      --> :box
+    legend          --> :none
+    gridalpha       --> 0.2
+    linewidth       --> 1.5
+    markershape     --> :circle
+    markersize      --> 3
+    yminorgrid      --> 0.1
+    yminorgridstyle --> :dash
+    seriestype      --> :path
+    tick_direction  --> :out
     solution.φ
 end
 
