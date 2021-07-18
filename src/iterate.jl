@@ -19,34 +19,7 @@ Base.getindex(iterate::TimeParallelIterate, n::Int) = iterate.chunks[n]
 Base.setindex!(iterate::TimeParallelIterate, value, n::Int) = iterate.chunks[n] = value
 Base.lastindex(iterate::TimeParallelIterate) = lastindex(iterate.chunks)
 
-getclosest(i₁, t₁, i₂, t₂, target) = (target - t₁ ≥ t₂ - target) ? (i₂, t₂) : (i₁, t₁)
-
-function findclosest(t, target)
-    n = length(t)
-    if target ≤ t[1]
-        return (1, t[1])
-    elseif target ≥ t[end]
-        return (n, t[end])
-    end
-    i = 0; j = n; mid = 0
-    while i < j
-        mid = (i + j) ÷ 2
-        if target == t[mid]
-            return t[mid]
-        elseif target < t[mid]
-            if (mid > 1) && (target > t[mid - 1])
-                return getclosest(mid - 1, t[mid - 1], mid, t[mid], target)
-            end
-            j = mid
-        else
-            if (mid < n) && (target < t[mid + 1])
-                return getclosest(mid, t[mid], mid + 1, t[mid + 1], target)
-            end
-            i = mid + 1
-        end
-    end
-    return (mid, t[mid])
-end
+# ----------------------------------- MISC ----------------------------------- #
 
 function (iterate::TimeParallelIterate)(t::Real)
     N = length(iterate)
@@ -57,9 +30,7 @@ function (iterate::TimeParallelIterate)(t::Real)
     else
         for n = 1:N
             if iterate[n].t[1] ≤ t ≤ iterate[n].t[end]
-                (i, tᵢ) = findclosest(iterate[n].t, t)
-                uᵢ = iterate[n].u[i]
-                return tᵢ, uᵢ
+                return iterate[n](t)
             end
         end
     end
