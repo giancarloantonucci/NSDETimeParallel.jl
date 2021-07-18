@@ -5,6 +5,7 @@ export MovingWindowSolver, MovingWindowSolution, MoWA
 export 𝜑₁, 𝜑₂
 
 using Reexport
+using Distributed
 using ArrowMacros
 using LinearAlgebra
 @reexport using NSDEBase

@@ -10,12 +10,31 @@ function solve!(solution::TimeParallelSolution, problem, solver::Parareal)
     end
     # main loop
     F = similar(U); F[1] = U[1]
+    @everywhere problem = $problem
     for k = 1:K
         # fine run (parallelisable)
-        for n = k:P
-            chunk = ℱ(problem, U[n], T[n], T[n+1])
-            solution[k][n] = chunk
-            F[n+1] = chunk.u[end]
+        if nprocs() == 1 || mode == "SERIAL"
+            for n = k:P
+                chunk = ℱ(problem, U[n], T[n], T[n+1])
+                solution[k][n] = chunk
+                F[n+1] = chunk.u[end]
+            end
+        elseif nprocs() > 1 && P == nworkers()
+            ws = (k:P)
+            @everywhere ws begin
+                n = myid()
+                U = $U
+                T = $T
+                Un = U[n]
+                Tn = T[n]
+                Tp = T[n+1]
+                chunk = ℱ(problem, Un, Tn, Tp)
+            end
+            for n in ws
+                chunk = @fetchfrom n Main.chunk
+                solution[k][n] = chunk
+                F[n+1] = chunk.u[end]
+            end
         end
         # check convergence
         φ[k] = 𝜑(U, F, T)

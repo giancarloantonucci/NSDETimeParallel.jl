@@ -24,5 +24,19 @@ function Parareal(finesolver::InitialValueSolver, coarsolver::InitialValueSolver
         solve(subproblem, coarsolver)
     end
     𝒢(problem, u0, t0, tN) = 𝒢(problem, u0, (t0, tN))
+    @everywhere begin
+        finesolver = $finesolver
+        coarsolver = $coarsolver
+        function ℱ(problem, u0, tspan)
+            subproblem = IVP(problem.rhs, u0, tspan)
+            solve(subproblem, finesolver)
+        end
+        ℱ(problem, u0, t0, tN) = ℱ(problem, u0, (t0, tN))
+        function 𝒢(problem, u0, tspan)
+            subproblem = IVP(problem.rhs, u0, tspan)
+            solve(subproblem, coarsolver)
+        end
+        𝒢(problem, u0, t0, tN) = 𝒢(problem, u0, (t0, tN))
+    end
     return Parareal(objective, mode, ℱ, 𝒢, P, K)
 end
