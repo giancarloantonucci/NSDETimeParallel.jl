@@ -12,6 +12,7 @@ using RecipesBase
 
 abstract type TimeParallelSolver <: InitialValueSolver end
 
+include("iterate.jl")
 include("solution.jl")
 include("objective.jl")
 include("parareal/solver.jl")
@@ -20,6 +21,5 @@ include("parareal/solve.jl")
 include("solve.jl")
 include("misc.jl")
 include("recipes.jl")
-
 
 end

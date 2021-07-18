@@ -1,24 +1,3 @@
-mutable struct TimeParallelIterate{chunks_T, U_T, T_T}
-    chunks::chunks_T
-    U::U_T
-    T::T_T
-end
-
-function TimeParallelIterate(problem, solver::TimeParallelSolver)
-    @↓ u0, t0 ← tspan[1] = problem
-    @↓ P = solver
-    chunks = Vector{Any}(undef, P)
-    U = Vector{typeof(u0)}(undef, P+1)
-    T = Vector{typeof(t0)}(undef, P+1)
-    TimeParallelIterate(chunks, U, T)
-end
-
-# solution[k][n] ≡ solution.iterates[k].chunks[n]
-Base.length(iterate::TimeParallelIterate) = length(iterate.chunks)
-Base.getindex(iterate::TimeParallelIterate, n::Int) = iterate.chunks[n]
-Base.setindex!(iterate::TimeParallelIterate, value, n::Int) = iterate.chunks[n] = value
-Base.lastindex(iterate::TimeParallelIterate) = lastindex(iterate.chunks)
-
 mutable struct TimeParallelSolution{iterates_T, φ_T, U_T, T_T} <: InitialValueSolution
     iterates::iterates_T
     φ::φ_T
@@ -42,3 +21,6 @@ Base.length(solution::TimeParallelSolution) = length(solution.iterates)
 Base.getindex(solution::TimeParallelSolution, k::Int) = solution.iterates[k]
 Base.setindex!(solution::TimeParallelSolution, value::TimeParallelIterate, k::Int) = solution.iterates[k] = value
 Base.lastindex(solution::TimeParallelSolution) = lastindex(solution.iterates)
+
+(solution::TimeParallelSolution)(t::Real) = solution[end](t)
+(solution::TimeParallelSolution)(t::Real, n::Integer) = solution[n](t)
