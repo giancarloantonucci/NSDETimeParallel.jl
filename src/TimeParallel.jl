@@ -18,6 +18,8 @@ include("parareal/solver.jl")
 include("parareal/solve.jl")
 # include("moving.jl")
 include("solve.jl")
+include("misc.jl")
 include("recipes.jl")
+
 
 end

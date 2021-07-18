@@ -9,7 +9,7 @@
     ()
 end
 
-@recipe function f(solution::TimeParallelSolution; vars = nothing)
+@recipe function f(solution::TimeParallelSolution; vars = nothing, chunks = false)
     framestyle     --> :box
     legend         --> :none
     gridalpha      --> 0.2
@@ -20,7 +20,18 @@ end
     xwiden         --> false
     tick_direction --> :out
     vars           --> vars
-    solution[end]
+    @series begin
+        solution[end]
+    end
+    if chunks == true
+        @series begin
+            seriescolor --> :black
+            seriestype  := :vline
+            linealpha   --> 0.5
+            linestyle   --> :dashdotdot
+            getchunks(solution[end])
+        end
+    end
 end
 
 @userplot CONVERGENCE
