@@ -19,8 +19,6 @@ Base.getindex(iterate::TimeParallelIterate, n::Int) = iterate.chunks[n]
 Base.setindex!(iterate::TimeParallelIterate, value, n::Int) = iterate.chunks[n] = value
 Base.lastindex(iterate::TimeParallelIterate) = lastindex(iterate.chunks)
 
-# ----------------------------------- MISC ----------------------------------- #
-
 function (iterate::TimeParallelIterate)(t::Real)
     N = length(iterate)
     if t ≤ iterate[1].t[1]

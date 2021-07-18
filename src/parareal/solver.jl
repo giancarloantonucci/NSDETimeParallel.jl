@@ -14,15 +14,15 @@ end
 
 function Parareal(finesolver::InitialValueSolver, coarsolver::InitialValueSolver; 𝜑 = 𝜑₁, ϵ = 1e-12, P = 10, K = P, mode = "SERIAL")
     objective = ErrorFunction(𝜑, ϵ)
-    function ℱ(rhs, u0, tspan)
-        subproblem = IVP(rhs, u0, tspan)
+    function ℱ(problem, u0, tspan)
+        subproblem = IVP(problem.rhs, u0, tspan)
         solve(subproblem, finesolver)
     end
-    ℱ(rhs, u0, t0, tN) = ℱ(rhs, u0, (t0, tN))
-    function 𝒢(rhs, u0, tspan)
-        subproblem = IVP(rhs, u0, tspan)
+    ℱ(problem, u0, t0, tN) = ℱ(problem, u0, (t0, tN))
+    function 𝒢(problem, u0, tspan)
+        subproblem = IVP(problem.rhs, u0, tspan)
         solve(subproblem, coarsolver)
     end
-    𝒢(rhs, u0, t0, tN) = 𝒢(rhs, u0, (t0, tN))
+    𝒢(problem, u0, t0, tN) = 𝒢(problem, u0, (t0, tN))
     return Parareal(objective, mode, ℱ, 𝒢, P, K)
 end
