@@ -11,6 +11,7 @@ function solve!(solution::TimeParallelSolution, problem, solver::Parareal)
     # main loop
     F = similar(U); F[1] = U[1]
     @everywhere problem = $problem
+    FF(a1, a2, a3, a4) = ℱ(a1, a2, a3, a4).u[end]
     for k = 1:K
         # fine run (parallelisable)
         if mode == "SERIAL" || nprocs() == 1
@@ -19,7 +20,7 @@ function solve!(solution::TimeParallelSolution, problem, solver::Parareal)
                 solution[k][n] = chunk
                 F[n+1] = chunk.u[end]
             end
-        elseif (mode == "PARALLEL" || mode == "PARALLEL2") && nprocs() > 1
+        elseif (mode == "PARALLEL" || mode == "PARALLEL2" || mode == "PARALLEL3") && nprocs() > 1
             # ws = (k:P)
             # @everywhere ws begin
             #     n = myid()
@@ -42,16 +43,25 @@ function solve!(solution::TimeParallelSolution, problem, solver::Parareal)
                     T = $T
                 end
             end
-            @sync begin
-                for n = k:P
-                    @async begin
-                        solution[k][n] = remotecall_fetch(ℱ, n, problem, U[n], T[n], T[n+1])
+            if mode == "PARALLEL3"
+                @sync begin
+                    for n = k:P
+                        @async begin
+                            solution[k][n] = remotecall_fetch(ℱ, n, problem, U[n], T[n], T[n+1])
+                        end
                     end
                 end
-            end
-            for n = k:P
-                chunk = solution[k][n]
-                F[n+1] = chunk.u[end]
+                for n = k:P
+                    F[n+1] = solution[k][n].u[end]
+                end
+            else
+                @sync begin
+                    for n = k:P
+                        @async begin
+                            F[n+1] = remotecall_fetch(FF, n, problem, U[n], T[n], T[n+1])
+                        end
+                    end
+                end
             end
         end
         # check convergence
