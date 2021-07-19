@@ -10,7 +10,7 @@ function solve!(solution::TimeParallelSolution, problem, solver::Parareal)
     end
     # main loop
     F = similar(U); F[1] = U[1]
-    @everywhere problem = $problem
+    # @everywhere problem = $problem
     FF(a1, a2, a3, a4) = ℱ(a1, a2, a3, a4).u[end]
     for k = 1:K
         # fine run (parallelisable)
@@ -20,7 +20,7 @@ function solve!(solution::TimeParallelSolution, problem, solver::Parareal)
                 solution[k][n] = chunk
                 F[n+1] = chunk.u[end]
             end
-        elseif (mode == "PARALLEL" || mode == "PARALLEL2" || mode == "PARALLEL3") && nprocs() > 1
+        elseif nprocs() > 1
             # ws = (k:P)
             # @everywhere ws begin
             #     n = myid()
