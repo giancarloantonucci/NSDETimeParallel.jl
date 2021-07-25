@@ -15,9 +15,8 @@ abstract type TimeParallelSolver <: InitialValueSolver end
 
 include("iterate.jl")
 include("solution.jl")
-include("objective.jl")
-include("parareal/solver.jl")
-include("parareal/solve.jl")
+include("error.jl")
+include("parareal.jl")
 # include("moving.jl")
 include("solve.jl")
 include("misc.jl")

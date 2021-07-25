@@ -1,4 +1,4 @@
-struct ErrorFunction{𝜑_T, ϵ_T}
+struct ErrorCheck{𝜑_T, ϵ_T}
     𝜑::𝜑_T
     ϵ::ϵ_T
 end
