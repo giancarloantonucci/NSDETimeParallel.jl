@@ -6,12 +6,12 @@ mutable struct TimeParallelSolution{iterates_T, φ_T, U_T, T_T} <: InitialValueS
 end
 
 function TimeParallelSolution(problem, solver::TimeParallelSolver)
-    @↓ u₀, tspan = problem
+    @↓ u0, tspan = problem
     @↓ P = solver
     @↓ ϵ = solver.error_check
     iterates = fill(TimeParallelIterate(problem, solver), P)
     φ = Vector{typeof(ϵ)}(undef, P)
-    U = Vector{typeof(u₀)}(undef, P+1)
+    U = Vector{typeof(u0)}(undef, P+1)
     T = Vector{eltype(tspan)}(undef, P+1)
     return TimeParallelSolution(iterates, φ, U, T)
 end

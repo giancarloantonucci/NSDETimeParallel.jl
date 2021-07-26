@@ -1,12 +1,12 @@
-function coarseguess!(solution::TimeParallelSolution, problem, u₀, t₀, tN, solver::TimeParallelSolver)
+function coarseguess!(solution::TimeParallelSolution, problem, u0, t0, tN, solver::TimeParallelSolver)
     @↓ 𝒢, P = solver
     @↓ U, T = solution
-    ΔT = (tN - t₀) / P
-    T[1] = t₀
+    ΔT = (tN - t0) / P
+    T[1] = t0
     for n = 1:P
         T[n+1] = T[n] + ΔT
     end
-    U[1] = u₀
+    U[1] = u0
     for n = 1:P
         chunk = 𝒢(problem, U[n], T[n], T[n+1])
         U[n+1] = chunk.u[end]
@@ -15,8 +15,8 @@ function coarseguess!(solution::TimeParallelSolution, problem, u₀, t₀, tN, s
 end
 
 function coarseguess!(solution::TimeParallelSolution, problem, solver::TimeParallelSolver)
-    @↓ u₀, (t₀, tN) ← tspan = problem
-    coarseguess!(solution, problem, u₀, t₀, tN, solver)
+    @↓ u0, (t0, tN) ← tspan = problem
+    coarseguess!(solution, problem, u0, t0, tN, solver)
 end
 
 function NSDEBase.solve(problem, solver::TimeParallelSolver; mode = "SERIAL")

@@ -12,29 +12,29 @@ function Parareal(ℱ::Function, 𝒢::Function; P = 10, K = P, 𝜑 = 𝜑₁, 
 end
 
 function Parareal(finesolver::InitialValueSolver, coarsolver::InitialValueSolver; P = 10, K = P, 𝜑 = 𝜑₁, ϵ = 1e-12)
-    function ℱ(problem, u₀, tspan)
-        subproblem = IVP(problem.rhs, u₀, tspan)
+    function ℱ(problem, u0, tspan)
+        subproblem = IVP(problem.rhs, u0, tspan)
         solve(subproblem, finesolver)
     end
-    ℱ(problem, u₀, t₀, tN) = ℱ(problem, u₀, (t₀, tN))
-    function 𝒢(problem, u₀, tspan)
-        subproblem = IVP(problem.rhs, u₀, tspan)
+    ℱ(problem, u0, t0, tN) = ℱ(problem, u0, (t0, tN))
+    function 𝒢(problem, u0, tspan)
+        subproblem = IVP(problem.rhs, u0, tspan)
         solve(subproblem, coarsolver)
     end
-    𝒢(problem, u₀, t₀, tN) = 𝒢(problem, u₀, (t₀, tN))
+    𝒢(problem, u0, t0, tN) = 𝒢(problem, u0, (t0, tN))
     @everywhere begin
         finesolver = $finesolver
         coarsolver = $coarsolver
-        function ℱ(problem, u₀, tspan)
-            subproblem = IVP(problem.rhs, u₀, tspan)
+        function ℱ(problem, u0, tspan)
+            subproblem = IVP(problem.rhs, u0, tspan)
             solve(subproblem, finesolver)
         end
-        ℱ(problem, u₀, t₀, tN) = ℱ(problem, u₀, (t₀, tN))
-        function 𝒢(problem, u₀, tspan)
-            subproblem = IVP(problem.rhs, u₀, tspan)
+        ℱ(problem, u0, t0, tN) = ℱ(problem, u0, (t0, tN))
+        function 𝒢(problem, u0, tspan)
+            subproblem = IVP(problem.rhs, u0, tspan)
             solve(subproblem, coarsolver)
         end
-        𝒢(problem, u₀, t₀, tN) = 𝒢(problem, u₀, (t₀, tN))
+        𝒢(problem, u0, t0, tN) = 𝒢(problem, u0, (t0, tN))
     end
     return Parareal(ℱ, 𝒢; P=P, K=K, 𝜑=𝜑, ϵ=ϵ)
 end

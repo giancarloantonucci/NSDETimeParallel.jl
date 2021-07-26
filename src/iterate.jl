@@ -5,10 +5,10 @@ mutable struct TimeParallelIterate{chunks_T, U_T, T_T}
 end
 
 function TimeParallelIterate(problem, solver::TimeParallelSolver)
-    @↓ u₀, tspan = problem
+    @↓ u0, tspan = problem
     @↓ P = solver
     chunks = Vector{Any}(undef, P)
-    U = Vector{typeof(u₀)}(undef, P+1)
+    U = Vector{typeof(u0)}(undef, P+1)
     T = Vector{eltype(tspan)}(undef, P+1)
     TimeParallelIterate(chunks, U, T)
 end
