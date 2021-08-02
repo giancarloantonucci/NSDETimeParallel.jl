@@ -5,17 +5,27 @@
 
 ## Public API
 
-```@docs
-RightHandSideFunction
-```
+### Constructors
 
 ```@docs
-InitialValueProblem
+solve
+solve!
+TimeParallelSolver
+TimeParallelIterate
+TimeParallelSolution
+```
+### Solvers
+
+```@docs
+Parareal
 ```
 
-```@autodocs
-Modules = [TimeParallel]
-Pages   = ["odes.jl"]
+### Utilities
+
+```@docs
+ErrorCheck
+coarseguess!
+getchunks
 ```
 
 ## Index
