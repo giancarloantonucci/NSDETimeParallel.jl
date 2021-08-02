@@ -1,0 +1,3 @@
+var documenterSearchIndex = {"docs":
+[{"location":"#TimeParallel.jl","page":"Home","title":"TimeParallel.jl","text":"","category":"section"},{"location":"","page":"Home","title":"Home","text":"","category":"page"},{"location":"#Public-API","page":"Home","title":"Public API","text":"","category":"section"},{"location":"","page":"Home","title":"Home","text":"RightHandSideFunction","category":"page"},{"location":"","page":"Home","title":"Home","text":"InitialValueProblem","category":"page"},{"location":"","page":"Home","title":"Home","text":"Modules = [TimeParallel]\nPages   = [\"odes.jl\"]","category":"page"},{"location":"#Index","page":"Home","title":"Index","text":"","category":"section"},{"location":"","page":"Home","title":"Home","text":"","category":"page"}]
+}
