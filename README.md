@@ -1,13 +1,15 @@
 # TimeParallel
 
-[![Build Status](https://github.com/antonuccig/TimeParallel.jl/workflows/CI/badge.svg)](https://github.com/antonuccig/TimeParallel.jl/actions) [![Coverage](https://codecov.io/gh/antonuccig/TimeParallel.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/antonuccig/TimeParallel.jl)
+A Julia package implementing time-parallel methods.
+
+[![Docs Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://antonuccig.github.io/TimeParallel.jl/stable) [![Docs Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://antonuccig.github.io/TimeParallel.jl/dev) [![Build Status](https://img.shields.io/github/workflow/status/antonuccig/TimeParallel.jl/CI)](https://github.com/antonuccig/TimeParallel.jl/actions) [![Coverage](https://img.shields.io/codecov/c/github/antonuccig/TimeParallel.jl?label=coverage)](https://codecov.io/gh/antonuccig/TimeParallel.jl)
 
 ## Installation
 
 `TimeParallel` is compatible with Julia `v1.0` and above. From the Julia REPL,
 
 ```julia
-]add https://github.com/antonuccig/TimeParallel.jl
+]add TimeParallel
 ```
 
 ## Usage
