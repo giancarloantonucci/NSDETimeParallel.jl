@@ -1,3 +1,8 @@
+"""
+    ErrorCheck{𝜑_T, ϵ_T}
+
+returns a constructor for the error control mechanism used by a [`TimeParallelSolver`](@ref). 
+"""
 struct ErrorCheck{𝜑_T, ϵ_T}
     𝜑::𝜑_T
     ϵ::ϵ_T

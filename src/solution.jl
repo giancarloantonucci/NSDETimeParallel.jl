@@ -1,3 +1,14 @@
+"""
+    TimeParallelSolution{iterates_T, φ_T, U_T, T_T} <: InitialValueSolution
+
+returns a constructor for the numerical solution of an [`InitialValueProblem`](@ref) obtained with a [`TimeParallelSolver`](@ref).
+
+---
+
+    TimeParallelSolution(problem, solver::TimeParallelSolver)
+
+returns an initialised [`TimeParallelSolution`](@ref) given a `problem`, e.g. an [`InitialValueProblem`](@ref), and a [`TimeParallelSolver`](@ref).
+"""
 mutable struct TimeParallelSolution{iterates_T, φ_T, U_T, T_T} <: InitialValueSolution
     iterates::iterates_T
     φ::φ_T
@@ -9,7 +20,7 @@ function TimeParallelSolution(problem, solver::TimeParallelSolver)
     @↓ u0, tspan = problem
     @↓ P = solver
     @↓ ϵ = solver.error_check
-    iterates = fill(TimeParallelIterate(problem, solver), P)
+    iterates = [TimeParallelIterate(problem, solver) for i = 1:P]
     φ = Vector{typeof(ϵ)}(undef, P)
     U = Vector{typeof(u0)}(undef, P+1)
     T = Vector{eltype(tspan)}(undef, P+1)

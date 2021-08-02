@@ -17,9 +17,9 @@ include("iterate.jl")
 include("solution.jl")
 include("error.jl")
 include("parareal.jl")
-# include("moving.jl")
+include("moving.jl")
 include("solve.jl")
 include("misc.jl")
-include("recipes.jl")
+include("plot.jl")
 
 end

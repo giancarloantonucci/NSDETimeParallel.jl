@@ -1,17 +1,6 @@
-@recipe function f(iterate::TimeParallelIterate; vars = nothing)
-    P = length(iterate)
-    for n in 1:P
-        vars    --> vars
-        @series iterate[n]
-    end
-    # solves a bug in Plots
-    primary := false
-    ()
-end
-
-@recipe function f(solution::TimeParallelSolution; vars = nothing, chunks = false)
+@recipe function f(iterate::TimeParallelIterate; vars = nothing, chunks = false, label = "")
+    fontfamily     --> "Computer Modern"
     framestyle     --> :box
-    legend         --> :none
     gridalpha      --> 0.2
     linewidth      --> 1.5
     minorgrid      --> 0.1
@@ -19,18 +8,36 @@ end
     seriestype     --> :path
     xwiden         --> false
     tick_direction --> :out
-    vars           --> vars
-    @series begin
-        solution[end]
+    P = length(iterate)
+    for n in 1:P
+        if n != P
+            label := ""
+        else
+            label := label
+        end
+        vars    --> vars
+        @series iterate[n]
     end
     if chunks == true
         @series begin
-            seriescolor --> :black
+            label := ""
+            seriescolor := :black
             seriestype  := :vline
             linealpha   --> 0.5
             linestyle   --> :dashdotdot
-            getchunks(solution[end])
+            getchunks(iterate)
         end
+    end
+    # solves a bug in Plots
+    primary := false
+    ()
+end
+
+@recipe function f(solution::TimeParallelSolution; vars = nothing, chunks = false, label = "")
+    @series begin
+        vars   --> vars
+        chunks --> chunks
+        solution[end]
     end
 end
 
@@ -41,6 +48,7 @@ end
     elseif h.args[1] isa TimeParallelSolution
         solution = h.args[1]
     end
+    fontfamily     --> "Computer Modern"
     framestyle      --> :box
     legend          --> :none
     gridalpha       --> 0.2
@@ -54,13 +62,13 @@ end
     solution.φ
 end
 
-# @recipe function f(solution::MovingWindowSolution; vars = nothing)
-#     framestyle  --> :box
-#     legend      --> :none
-#     seriestype  --> :path
-#     M = length(solution)
-#     for m in 1:M
-#         vars    --> vars
-#         @series solution[m]
-#     end
-# end
+@recipe function f(solution::MovingWindowSolution; vars = nothing)
+    framestyle  --> :box
+    legend      --> :none
+    seriestype  --> :path
+    M = length(solution)
+    for m in 1:M
+        vars    --> vars
+        @series solution[m]
+    end
+end

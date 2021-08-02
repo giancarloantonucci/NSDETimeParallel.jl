@@ -1,3 +1,26 @@
+"""
+    Parareal{error_check_T, ℱ_T, 𝒢_T, P_T, K_T} <: TimeParallelSolver
+
+returns a constructor for the [`TimeParallelSolver`](@ref) based on the parareal algorithm.
+
+---
+
+    Parareal(ℱ::Function, 𝒢::Function; P = 10, K = P, 𝜑 = 𝜑₁, ϵ = 1e-12)
+
+returns a [`Parareal`](@ref) with:
+- `ℱ :: Function` : fine solver.
+- `𝒢 :: Function` : coarse solver.
+- `P :: Integer`  : number of time chunks.
+- `K :: Integer`  : maximum number of iterations.
+- `𝜑 :: Function` : error control function.
+- `ϵ :: Real`     : tolerance.
+
+---
+
+    Parareal(finesolver::InitialValueSolver, coarsolver::InitialValueSolver; P = 10, K = P, 𝜑 = 𝜑₁, ϵ = 1e-12)
+
+returns a [`Parareal`](@ref) from a `finesolver` and a `coarsolver`.
+"""
 struct Parareal{error_check_T, ℱ_T, 𝒢_T, P_T, K_T} <: TimeParallelSolver
     error_check::error_check_T
     ℱ::ℱ_T
@@ -54,6 +77,9 @@ function solve_serial!(solution::TimeParallelSolution, problem, solver::Parareal
     F = similar(U)
     F[1] = U[1]
     for k = 1:K
+        for n = 1:k-1
+            solution[k][n] = solution[k-1][n]
+        end
         # fine run (parallelisable)
         for n = k:P
             chunk = ℱ(problem, U[n], T[n], T[n+1])

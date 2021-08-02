@@ -1,3 +1,14 @@
+"""
+    TimeParallelIterate{chunks_T, U_T, T_T}
+
+returns a constructor for one iteration of a [`TimeParallelSolution`](@ref).
+
+---
+
+    TimeParallelIterate(problem, solver::TimeParallelSolver)
+
+returns an initialised [`TimeParallelIterate`](@ref) given a `problem`, e.g. an [`InitialValueProblem`](@ref), and a [`TimeParallelSolver`](@ref).
+"""
 mutable struct TimeParallelIterate{chunks_T, U_T, T_T}
     chunks::chunks_T
     U::U_T
