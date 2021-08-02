@@ -1,15 +1,16 @@
 using Documenter
 using TimeParallel
 
-makedocs(
+PAGES = ["Home" => "index.md"]
+
+makedocs(;
     sitename = "TimeParallel",
     format = Documenter.HTML(),
-    modules = [TimeParallel]
+    modules = [TimeParallel],
+    pages = PAGES,
+    authors = "Giancarlo A. Antonucci <giancarlo.antonucci@icloud.com>"
 )
 
-# Documenter can also automatically deploy documentation to gh-pages.
-# See "Hosting Documentation" and deploydocs() in the Documenter manual
-# for more information.
-#=deploydocs(
-    repo = "<repository url>"
-)=#
+deploydocs(;
+    repo = "https://github.com/antonuccig/TimeParallel.jl"
+)
