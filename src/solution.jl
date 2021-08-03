@@ -86,6 +86,23 @@ prints a brief description of `solution` to a stream `io`.
 """
 Base.summary(io::IO, solution::TimeParallelSolution) = NSDEBase._summary(io, solution)
 
+function RungeKutta.extract(iterate::TimeParallelIterate, i::Integer)
+    N = length(iterate)
+    @↓ u1 ← u, t1 ← t = RungeKutta.extract(iterate[1], i)
+    u = eltype(u1)[]
+    t = eltype(t1)[]
+    append!(u, u1[2:end])
+    append!(t, t1[2:end])
+    for n = 2:N
+        @↓ u1 ← u, t1 ← t = RungeKutta.extract(iterate[n], i)
+        append!(u, u1[2:end])
+        append!(t, t1[2:end])
+    end
+    return RungeKutta.RungeKuttaSolution(u, t)
+end
+
+RungeKutta.extract(solution::TimeParallelSolution, i::Integer) = RungeKutta.extract(solution[end], i)
+
 # ---------------------------------------------------------------------------- #
 #                                    Methods                                   #
 # ---------------------------------------------------------------------------- #

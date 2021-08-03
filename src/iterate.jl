@@ -32,7 +32,7 @@ function TimeParallelIterate(problem, solver::TimeParallelSolver)
     chunks = Vector{Any}(undef, P)
     U = Vector{typeof(u0)}(undef, P+1)
     T = Vector{eltype(tspan)}(undef, P+1)
-    TimeParallelIterate(chunks, U, T)
+    return TimeParallelIterate(chunks, U, T)
 end
 
 # ---------------------------------------------------------------------------- #

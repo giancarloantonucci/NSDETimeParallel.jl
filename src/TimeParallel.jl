@@ -10,6 +10,7 @@ using Distributed
 using ArrowMacros
 using LinearAlgebra
 @reexport using NSDEBase
+import RungeKutta
 using RecipesBase
 
 include("solver.jl")
@@ -18,7 +19,7 @@ include("solution.jl")
 include("error.jl")
 include("parareal.jl")
 include("solve.jl")
-include("misc.jl")
+include("utils.jl")
 include("plot.jl")
 
 end

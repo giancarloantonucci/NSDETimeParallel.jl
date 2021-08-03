@@ -214,7 +214,6 @@ function parareal_distributed!(solution::TimeParallelSolution, problem, solver::
 end
 
 function (solver::Parareal)(solution::TimeParallelSolution, problem; mode = "SERIAL")
-    coarseguess!(solution, problem, solver)
     if nprocs() == 1 || mode == "SERIAL"
         parareal_serial!(solution, problem, solver)
     elseif nprocs() > 1 && mode == "DISTRIBUTED"
@@ -227,6 +226,7 @@ end
 
 function (solver::Parareal)(problem; mode = "SERIAL")
     solution = TimeParallelSolution(problem, solver)
+    coarseguess!(solution, problem, solver)
     solver(solution, problem; mode=mode)
     return solution
 end

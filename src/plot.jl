@@ -1,30 +1,33 @@
 @recipe function f(iterate::TimeParallelIterate; vars = nothing, chunks = false, label = "")
-    fontfamily     --> "Computer Modern"
-    framestyle     --> :box
-    gridalpha      --> 0.2
-    linewidth      --> 1.5
-    minorgrid      --> 0.1
+    fontfamily --> "Computer Modern"
+    framestyle --> :box
+    gridalpha --> 0.2
+    linewidth --> 1.5
+    minorgrid --> 0.1
     minorgridstyle --> :dash
-    seriestype     --> :path
+    seriestype --> :path
     tick_direction --> :out
-    xwiden         --> false
+    xwiden --> false
     P = length(iterate)
     for n in 1:P
-        if n != P
-            label := ""
-        else
-            label := label
+        @series begin
+            if n != P
+                label := ""
+            else
+                label := label
+            end
+            vars --> vars
+            seriescolor --> n
+            iterate[n]
         end
-        vars    --> vars
-        @series iterate[n]
     end
     if chunks == true
         @series begin
             label := ""
             seriescolor := :black
-            seriestype  := :vline
-            linealpha   --> 0.5
-            linestyle   --> :dashdotdot
+            seriestype := :vline
+            linealpha --> 0.5
+            linestyle --> :dashdotdot
             getchunks(iterate)
         end
     end
@@ -57,7 +60,7 @@ end
     markersize      --> 3
     seriestype      --> :path
     tick_direction  --> :out
-    yminorgrid      --> 0.1
+    yminorgrid      --> true
     yminorgridstyle --> :dash
     solution.φ
 end
