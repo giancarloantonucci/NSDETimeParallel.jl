@@ -1,4 +1,4 @@
-# TimeParallel
+# TimeParallel.jl
 
 A Julia package implementing time-parallel methods.
 
@@ -6,7 +6,7 @@ A Julia package implementing time-parallel methods.
 
 ## Installation
 
-`TimeParallel` is compatible with Julia `v1.0` and above. From the Julia REPL,
+TimeParallel is a [registered package](https://juliahub.com/ui/Search?q=TimeParallel&type=packages) compatible with Julia v1.0 and above. From the Julia REPL,
 
 ```julia
 ]add TimeParallel

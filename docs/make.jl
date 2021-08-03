@@ -4,7 +4,7 @@ using TimeParallel
 PAGES = ["Home" => "index.md"]
 
 makedocs(;
-    sitename = "TimeParallel",
+    sitename = "TimeParallel.jl",
     format = Documenter.HTML(),
     modules = [TimeParallel],
     pages = PAGES,
