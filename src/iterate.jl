@@ -1,13 +1,24 @@
 """
-    TimeParallelIterate{chunks_T, U_T, T_T}
+    TimeParallelIterate
 
-returns a constructor for one iteration of a [`TimeParallelSolution`](@ref).
+A composite type for the single iterations within a [`TimeParallelSolution`](@ref).
 
----
+# Constructors
+```julia
+TimeParallelIterate(problem, solver)
+```
 
-    TimeParallelIterate(problem, solver::TimeParallelSolver)
+# Arguments
+- `problem` : initial value problem, e.g. an [`InitialValueProblem`](@ref).
+- `solver :: TimeParallelSolver`.
 
-returns an initialised [`TimeParallelIterate`](@ref) given a `problem`, e.g. an [`InitialValueProblem`](@ref), and a [`TimeParallelSolver`](@ref).
+# Functions
+- [`getindex`](@ref) : get chunk.
+- [`lastindex`](@ref) : last index.
+- [`length`](@ref) : number of chunks.
+- [`setindex!`](@ref) : set chunk.
+- [`show`](@ref) : shows name and contents.
+- [`summary`](@ref) : shows name.
 """
 mutable struct TimeParallelIterate{chunks_T, U_T, T_T}
     chunks::chunks_T
@@ -24,11 +35,57 @@ function TimeParallelIterate(problem, solver::TimeParallelSolver)
     TimeParallelIterate(chunks, U, T)
 end
 
+# ---------------------------------------------------------------------------- #
+#                                   Functions                                  #
+# ---------------------------------------------------------------------------- #
+
 # solution[k][n] ≡ solution.iterates[k].chunks[n]
+
+"""
+    length(iterate::TimeParallelIterate)
+
+returns the number of chunks of `iterate`.
+"""
 Base.length(iterate::TimeParallelIterate) = length(iterate.chunks)
-Base.getindex(iterate::TimeParallelIterate, n::Int) = iterate.chunks[n]
-Base.setindex!(iterate::TimeParallelIterate, value, n::Int) = iterate.chunks[n] = value
+
+"""
+    getindex(iterate::TimeParallelIterate, n::Integer)
+
+returns the `n`-th chunk of a [`TimeParallelIterate`](@ref).
+"""
+Base.getindex(iterate::TimeParallelIterate, n::Integer) = iterate.chunks[n]
+
+"""
+    setindex!(iterate::TimeParallelIterate, value, n::Integer)
+
+stores `value` into the `n`-th chunk of a [`TimeParallelIterate`](@ref).
+"""
+Base.setindex!(iterate::TimeParallelIterate, value, n::Integer) = iterate.chunks[n] = value
+
+"""
+    lastindex(iterate::TimeParallelIterate)
+
+returns the last index of `iterate`.
+"""
 Base.lastindex(iterate::TimeParallelIterate) = lastindex(iterate.chunks)
+
+"""
+    show(io::IO, iterate::TimeParallelIterate)
+
+prints a full description of `iterate` and its contents to a stream `io`.
+"""
+Base.show(io::IO, iterate::TimeParallelIterate) = NSDEBase._show(io, iterate)
+
+"""
+    summary(io::IO, iterate::TimeParallelIterate)
+
+prints a brief description of `iterate` to a stream `io`.
+"""
+Base.summary(io::IO, iterate::TimeParallelIterate) = NSDEBase._summary(io, iterate)
+
+# ---------------------------------------------------------------------------- #
+#                                    Methods                                   #
+# ---------------------------------------------------------------------------- #
 
 function (iterate::TimeParallelIterate)(t::Real)
     N = length(iterate)

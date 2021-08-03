@@ -1,25 +1,25 @@
 """
-    Parareal{error_check_T, ℱ_T, 𝒢_T, P_T, K_T} <: TimeParallelSolver
+    Parareal <: TimeParallelSolver
 
-returns a constructor for the [`TimeParallelSolver`](@ref) based on the parareal algorithm.
+A composite type for the parareal algorithm.
 
----
+# Constructors
+```julia
+Parareal(ℱ, 𝒢; P = 10, K = P, φ = ErrorCheck(; 𝜑 = 𝜑₁, ϵ = 1e-12))
+Parareal(ℱ, 𝒢; P = 10, K = P, 𝜑 = 𝜑₁, ϵ = 1e-12)
+```
 
-    Parareal(ℱ::Function, 𝒢::Function; P = 10, K = P, 𝜑 = 𝜑₁, ϵ = 1e-12)
-
-returns a [`Parareal`](@ref) with:
-- `ℱ :: Function` : fine solver.
-- `𝒢 :: Function` : coarse solver.
-- `P :: Integer`  : number of time chunks.
-- `K :: Integer`  : maximum number of iterations.
+# Arguments
+- `ℱ :: Union{Function, InitialValueSolver}` : fine solver.
+- `𝒢 :: Union{Function, InitialValueSolver}` : coarse solver.
+- `P :: Integer` : number of time chunks.
+- `K :: Integer` : maximum number of iterations.
 - `𝜑 :: Function` : error control function.
-- `ϵ :: Real`     : tolerance.
+- `ϵ :: Real` : tolerance.
 
----
-
-    Parareal(finesolver::InitialValueSolver, coarsolver::InitialValueSolver; P = 10, K = P, 𝜑 = 𝜑₁, ϵ = 1e-12)
-
-returns a [`Parareal`](@ref) from a `finesolver` and a `coarsolver`.
+# Functions
+- [`show`](@ref) : shows name and contents.
+- [`summary`](@ref) : shows name.
 """
 struct Parareal{error_check_T, ℱ_T, 𝒢_T, P_T, K_T} <: TimeParallelSolver
     error_check::error_check_T
@@ -62,7 +62,78 @@ function Parareal(finesolver::InitialValueSolver, coarsolver::InitialValueSolver
     return Parareal(ℱ, 𝒢; P=P, K=K, 𝜑=𝜑, ϵ=ϵ)
 end
 
-function solve_serial!(solution::TimeParallelSolution, problem, solver::Parareal)
+# ---------------------------------------------------------------------------- #
+#                                   Functions                                  #
+# ---------------------------------------------------------------------------- #
+
+"""
+    show(io::IO, parareal::Parareal)
+
+prints a full description of `parareal` and its contents to a stream `io`.
+"""
+Base.show(io::IO, parareal::Parareal) = NSDEBase._show(io, parareal)
+# function Base.show(io::IO, solver::Parareal)
+#     print(io, "TimeParallelSolver:")
+#     pad = get(io, :pad, "")
+#     names = propertynames(solver)
+#     N = length(names)
+#     for (n, name) in enumerate(names)
+#         field = getproperty(solver, name)
+#         if string(name) == "ℱ" || string(name) == "𝒢"
+#             print(io, "\n", pad, "   ‣ " * string(name) * " ≔ ")
+#             summary(io, field)
+#         else
+#             if field !== nothing
+#                 print(io, "\n", pad, "   ‣ " * string(name) * " ≔ ")
+#                 show(IOContext(io, :pad => string(pad, "   ")), field)
+#             end
+#         end
+#     end
+# end
+
+"""
+    summary(io::IO, parareal::Parareal)
+
+prints a brief description of `parareal` to a stream `io`.
+"""
+Base.summary(io::IO, parareal::Parareal) = NSDEBase._summary(io, parareal)
+
+# ---------------------------------------------------------------------------- #
+#                                    Methods                                   #
+# ---------------------------------------------------------------------------- #
+
+"""
+    coarseguess!(solution::TimeParallelSolution, problem, u0, t0, tN, solver::Parareal)
+
+computes the coarse solution of a `problem`, e.g. an [`InitialValueProblem`](@ref), as part of the first iteration of [`Parareal`](@ref).
+"""
+function coarseguess!(solution::TimeParallelSolution, problem, u0, t0, tN, solver::Parareal)
+    @↓ 𝒢, P = solver
+    @↓ U, T = solution
+    T[1] = t0
+    for n in 1:P
+        # more stable sum
+        T[n+1] = (1 - n / P) * t0 + n * tN / P
+    end
+    U[1] = u0
+    for n = 1:P
+        chunk = 𝒢(problem, U[n], T[n], T[n+1])
+        U[n+1] = chunk.u[end]
+    end
+    @↑ solution = U, T
+end
+
+"""
+    coarseguess!(solution::TimeParallelSolution, problem, solver::Parareal)
+
+computes the coarse solution of a `problem`, e.g. an [`InitialValueProblem`](@ref), as part of the first iteration of [`Parareal`](@ref).
+"""
+function coarseguess!(solution::TimeParallelSolution, problem, solver::Parareal)
+    @↓ u0, (t0, tN) ← tspan = problem
+    coarseguess!(solution, problem, u0, t0, tN, solver)
+end
+
+function parareal_serial!(solution::TimeParallelSolution, problem, solver::Parareal)
     @↓ iterates, φ, U, T = solution
     @↓ ℱ, 𝒢, P, K = solver
     @↓ 𝜑, ϵ = solver.error_check
@@ -104,7 +175,7 @@ function solve_serial!(solution::TimeParallelSolution, problem, solver::Parareal
     return solution
 end
 
-function solve_distributed!(solution::TimeParallelSolution, problem, solver::Parareal)
+function parareal_distributed!(solution::TimeParallelSolution, problem, solver::Parareal)
     @↓ iterates, φ, U, T = solution
     @↓ ℱ, 𝒢, P, K = solver
     @↓ 𝜑, ϵ = solver.error_check
@@ -139,5 +210,23 @@ function solve_distributed!(solution::TimeParallelSolution, problem, solver::Par
         end
         @↑ solution = U, T
     end
+    return solution
+end
+
+function (solver::Parareal)(solution::TimeParallelSolution, problem; mode = "SERIAL")
+    coarseguess!(solution, problem, solver)
+    if nprocs() == 1 || mode == "SERIAL"
+        parareal_serial!(solution, problem, solver)
+    elseif nprocs() > 1 && mode == "DISTRIBUTED"
+        parareal_distributed!(solution, problem, solver)
+    elseif nprocs() > 1 && mode == "MPI"
+        # parareal_mpi!(solution, problem, solver)
+    end
+    return solution
+end
+
+function (solver::Parareal)(problem; mode = "SERIAL")
+    solution = TimeParallelSolution(problem, solver)
+    solver(solution, problem; mode=mode)
     return solution
 end

@@ -1,7 +1,8 @@
 module TimeParallel
 
-export TimeParallelSolver, TimeParallelSolution, Parareal
-export MovingWindowSolver, MovingWindowSolution, MoWA
+export TimeParallelSolver
+export TimeParallelSolution
+export Parareal
 export 𝜑₁, 𝜑₂
 
 using Reexport
@@ -11,13 +12,11 @@ using LinearAlgebra
 @reexport using NSDEBase
 using RecipesBase
 
-abstract type TimeParallelSolver <: InitialValueSolver end
-
+include("solver.jl")
 include("iterate.jl")
 include("solution.jl")
 include("error.jl")
 include("parareal.jl")
-include("moving.jl")
 include("solve.jl")
 include("misc.jl")
 include("plot.jl")

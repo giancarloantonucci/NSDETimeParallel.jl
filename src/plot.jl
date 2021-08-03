@@ -6,8 +6,8 @@
     minorgrid      --> 0.1
     minorgridstyle --> :dash
     seriestype     --> :path
-    xwiden         --> false
     tick_direction --> :out
+    xwiden         --> false
     P = length(iterate)
     for n in 1:P
         if n != P
@@ -48,27 +48,16 @@ end
     elseif h.args[1] isa TimeParallelSolution
         solution = h.args[1]
     end
-    fontfamily     --> "Computer Modern"
+    fontfamily      --> "Computer Modern"
     framestyle      --> :box
     legend          --> :none
     gridalpha       --> 0.2
     linewidth       --> 1.5
     markershape     --> :circle
     markersize      --> 3
-    yminorgrid      --> 0.1
-    yminorgridstyle --> :dash
     seriestype      --> :path
     tick_direction  --> :out
+    yminorgrid      --> 0.1
+    yminorgridstyle --> :dash
     solution.φ
-end
-
-@recipe function f(solution::MovingWindowSolution; vars = nothing)
-    framestyle  --> :box
-    legend      --> :none
-    seriestype  --> :path
-    M = length(solution)
-    for m in 1:M
-        vars    --> vars
-        @series solution[m]
-    end
 end

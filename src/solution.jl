@@ -1,13 +1,24 @@
 """
-    TimeParallelSolution{iterates_T, φ_T, U_T, T_T} <: InitialValueSolution
+    TimeParallelSolution <: InitialValueSolution
 
-returns a constructor for the numerical solution of an [`InitialValueProblem`](@ref) obtained with a [`TimeParallelSolver`](@ref).
+A composite type for the solution of an [`InitialValueProblem`](@ref) obtained with a [`TimeParallelSolver`](@ref).
 
----
+# Constructors
+```julia
+TimeParallelSolution(problem, solver)
+```
 
-    TimeParallelSolution(problem, solver::TimeParallelSolver)
+# Arguments
+- `problem` : initial value problem, e.g. an [`InitialValueProblem`](@ref).
+- `solver :: TimeParallelSolver`.
 
-returns an initialised [`TimeParallelSolution`](@ref) given a `problem`, e.g. an [`InitialValueProblem`](@ref), and a [`TimeParallelSolver`](@ref).
+# Functions
+- [`getindex`](@ref) : get iterate.
+- [`lastindex`](@ref) : last index.
+- [`length`](@ref) : number of iterates.
+- [`setindex!`](@ref) : set iterate.
+- [`show`](@ref) : shows name and contents.
+- [`summary`](@ref) : shows name.
 """
 mutable struct TimeParallelSolution{iterates_T, φ_T, U_T, T_T} <: InitialValueSolution
     iterates::iterates_T
@@ -27,11 +38,57 @@ function TimeParallelSolution(problem, solver::TimeParallelSolver)
     return TimeParallelSolution(iterates, φ, U, T)
 end
 
+# ---------------------------------------------------------------------------- #
+#                                   Functions                                  #
+# ---------------------------------------------------------------------------- #
+
 # solution[k] ≡ solution.iterates[k]
+
+"""
+    length(solution::TimeParallelSolution)
+
+returns the number of iterates of `solution`.
+"""
 Base.length(solution::TimeParallelSolution) = length(solution.iterates)
-Base.getindex(solution::TimeParallelSolution, k::Int) = solution.iterates[k]
-Base.setindex!(solution::TimeParallelSolution, value::TimeParallelIterate, k::Int) = solution.iterates[k] = value
+
+"""
+    getindex(solution::TimeParallelSolution, k::Integer)
+
+returns the `n`-th iterate of a [`TimeParallelSolution`](@ref).
+"""
+Base.getindex(solution::TimeParallelSolution, k::Integer) = solution.iterates[k]
+
+"""
+    setindex!(solution::TimeParallelSolution, iterate::TimeParallelIterate, k::Integer)
+
+stores a [`TimeParallelIterate`](@ref) into the `n`-th iterate of a [`TimeParallelSolution`](@ref).
+"""
+Base.setindex!(solution::TimeParallelSolution, iterate::TimeParallelIterate, k::Integer) = solution.iterates[k] = iterate
+
+"""
+    lastindex(solution::TimeParallelSolution)
+
+returns the last index of `solution`.
+"""
 Base.lastindex(solution::TimeParallelSolution) = lastindex(solution.iterates)
+
+"""
+    show(io::IO, solution::TimeParallelSolution)
+
+prints a full description of `solution` and its contents to a stream `io`.
+"""
+Base.show(io::IO, solution::TimeParallelSolution) = NSDEBase._show(io, solution)
+
+"""
+    summary(io::IO, solution::TimeParallelSolution)
+
+prints a brief description of `solution` to a stream `io`.
+"""
+Base.summary(io::IO, solution::TimeParallelSolution) = NSDEBase._summary(io, solution)
+
+# ---------------------------------------------------------------------------- #
+#                                    Methods                                   #
+# ---------------------------------------------------------------------------- #
 
 (solution::TimeParallelSolution)(t::Real) = solution[end](t)
 (solution::TimeParallelSolution)(t::Real, n::Integer) = solution[n](t)

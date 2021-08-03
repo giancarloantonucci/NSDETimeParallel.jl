@@ -1,9 +1,7 @@
 """
-    getchunks(problem, solver::TimeParallelSolver)
-    getchunks(iterate::TimeParallelIterate)
-    getchunks(solution::TimeParallelSolution)
+    getchunks(problem, solver::TimeParallelSolver) :: UnitRange
 
-returns a `UnitRange` of the nodes at which the time domain has been divided into chunks.
+returns the time-chunk nodes.
 """
 function getchunks(problem, solver::TimeParallelSolver)
     @↓ (t0, tN) ← tspan = problem
@@ -13,6 +11,11 @@ function getchunks(problem, solver::TimeParallelSolver)
     t0:ΔT:tN
 end
 
+"""
+    getchunks(iterate::TimeParallelIterate) :: UnitRange
+
+returns the time-chunk nodes.
+"""
 function getchunks(iterate::TimeParallelIterate)
     t0 = iterate[1].t[1]
     tN = iterate[end].t[end]
@@ -22,4 +25,9 @@ function getchunks(iterate::TimeParallelIterate)
     t0:ΔT:tN
 end
 
+"""
+    getchunks(solution::TimeParallelSolution) :: UnitRange
+
+returns the time-chunk nodes.
+"""
 getchunks(solution::TimeParallelSolution) = getchunks(solution[end])
