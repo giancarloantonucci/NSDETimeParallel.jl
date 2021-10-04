@@ -183,7 +183,7 @@ end
 function parareal_distributed!(solution::TimeParallelSolution, problem, solver::Parareal)
     @↓ iterates, φ, U, T = solution
     @↓ ℱ, 𝒢, P, K = solver
-    @↓ 𝜑, ϵ = solver.error_check
+    @↓ 𝜑, ϵ, Λ, updateΛ = solver.error_check
     # coarse guess
     G = similar(U)
     G[1] = U[1]
@@ -196,12 +196,21 @@ function parareal_distributed!(solution::TimeParallelSolution, problem, solver::
     F[1] = U[1]
     getF(args...) = ℱ(args...).u[end]
     for k = 1:K
-        # fine run (parallelisable)
+        # @↑ solution[k] = U .← U
+        solution[k].U .= U
+        for n = 1:k-1
+            solution[k][n] = solution[k-1][n]
+        end
+        # fine run (with Julia's Distributed.jl)
         @sync for n = k:P
             @async F[n+1] = remotecall_fetch(getF, n, problem, U[n], T[n], T[n+1])
         end
+        solution[k].F .= F
         # check convergence
-        φ[k] = 𝜑(U, F, T)
+        # update Lipschitz constant
+        Λ = updateΛ ? update_Lipschitz(Λ, U, F) : Λ
+        # check convergence
+        φ[k] = 𝜑(solution, k, Λ)
         if φ[k] ≤ ϵ
             resize!(iterates, k)
             resize!(φ, k)
