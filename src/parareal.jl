@@ -206,7 +206,6 @@ function parareal_distributed!(solution::TimeParallelSolution, problem, solver::
             @async F[n+1] = remotecall_fetch(getF, n, problem, U[n], T[n], T[n+1])
         end
         solution[k].F .= F
-        # check convergence
         # update Lipschitz constant
         Λ = updateΛ ? update_Lipschitz(Λ, U, F) : Λ
         # check convergence
