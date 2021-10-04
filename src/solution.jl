@@ -29,9 +29,9 @@ end
 
 function TimeParallelSolution(problem, solver::TimeParallelSolver)
     @↓ u0, tspan = problem
-    @↓ P = solver
+    @↓ P, K = solver
     @↓ ϵ = solver.error_check
-    iterates = [TimeParallelIterate(problem, solver) for i = 1:P]
+    iterates = [TimeParallelIterate(problem, solver) for i = 1:K]
     φ = Vector{typeof(ϵ)}(undef, P)
     U = Vector{typeof(u0)}(undef, P+1)
     T = Vector{eltype(tspan)}(undef, P+1)
