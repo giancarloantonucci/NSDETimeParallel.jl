@@ -91,8 +91,8 @@ function RungeKutta.extract(iterate::TimeParallelIterate, i::Integer)
     @↓ u1 ← u, t1 ← t = RungeKutta.extract(iterate[1], i)
     u = eltype(u1)[]
     t = eltype(t1)[]
-    append!(u, u1[2:end])
-    append!(t, t1[2:end])
+    append!(u, u1[1:end])
+    append!(t, t1[1:end])
     for n = 2:N
         @↓ u1 ← u, t1 ← t = RungeKutta.extract(iterate[n], i)
         append!(u, u1[2:end])

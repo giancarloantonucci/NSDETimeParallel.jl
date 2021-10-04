@@ -20,10 +20,11 @@ TimeParallelIterate(problem, solver)
 - [`show`](@ref) : shows name and contents.
 - [`summary`](@ref) : shows name.
 """
-mutable struct TimeParallelIterate{chunks_T, U_T, T_T}
+mutable struct TimeParallelIterate{chunks_T, U_T, T_T, F_T}
     chunks::chunks_T
     U::U_T
     T::T_T
+    F::F_T
 end
 
 function TimeParallelIterate(problem, solver::TimeParallelSolver)
@@ -32,7 +33,8 @@ function TimeParallelIterate(problem, solver::TimeParallelSolver)
     chunks = Vector{Any}(undef, P)
     U = Vector{typeof(u0)}(undef, P+1)
     T = Vector{eltype(tspan)}(undef, P+1)
-    return TimeParallelIterate(chunks, U, T)
+    F = similar(U)
+    return TimeParallelIterate(chunks, U, T, F)
 end
 
 # ---------------------------------------------------------------------------- #

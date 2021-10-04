@@ -5,8 +5,7 @@ A composite type for the parareal algorithm.
 
 # Constructors
 ```julia
-Parareal(ℱ, 𝒢; P = 10, K = P, φ = ErrorCheck(; 𝜑 = 𝜑₁, ϵ = 1e-12))
-Parareal(ℱ, 𝒢; P = 10, K = P, 𝜑 = 𝜑₁, ϵ = 1e-12)
+Parareal(ℱ, 𝒢; P = 10, K = P, φ = ErrorCheck())
 ```
 
 # Arguments
@@ -29,12 +28,11 @@ struct Parareal{error_check_T, ℱ_T, 𝒢_T, P_T, K_T} <: TimeParallelSolver
     K::K_T
 end
 
-function Parareal(ℱ::Function, 𝒢::Function; P = 10, K = P, 𝜑 = 𝜑₁, ϵ = 1e-12)
-    error_check = ErrorCheck(𝜑, ϵ)
-    return Parareal(error_check, ℱ, 𝒢, P, K)
+function Parareal(ℱ::Function, 𝒢::Function; P = 10, K = P, φ = ErrorCheck())
+    return Parareal(φ, ℱ, 𝒢, P, K)
 end
 
-function Parareal(finesolver::InitialValueSolver, coarsolver::InitialValueSolver; P = 10, K = P, 𝜑 = 𝜑₁, ϵ = 1e-12)
+function Parareal(finesolver::InitialValueSolver, coarsolver::InitialValueSolver; P = 10, K = P, φ = ErrorCheck())
     function ℱ(problem, u0, tspan)
         subproblem = IVP(problem.rhs, u0, tspan)
         solve(subproblem, finesolver)
@@ -59,7 +57,7 @@ function Parareal(finesolver::InitialValueSolver, coarsolver::InitialValueSolver
         end
         𝒢(problem, u0, t0, tN) = 𝒢(problem, u0, (t0, tN))
     end
-    return Parareal(ℱ, 𝒢; P=P, K=K, 𝜑=𝜑, ϵ=ϵ)
+    return Parareal(ℱ, 𝒢; P=P, K=K, φ=φ)
 end
 
 # ---------------------------------------------------------------------------- #
@@ -117,6 +115,8 @@ function coarseguess!(solution::TimeParallelSolution, problem, u0, t0, tN, solve
     end
     U[1] = u0
     for n = 1:P
+        # subproblem = IVP(rhs, U[n], T[n], T[n+1])
+        # chunk = solve(problem, coarsolver)
         chunk = 𝒢(problem, U[n], T[n], T[n+1])
         U[n+1] = chunk.u[end]
     end
@@ -136,7 +136,7 @@ end
 function parareal_serial!(solution::TimeParallelSolution, problem, solver::Parareal)
     @↓ iterates, φ, U, T = solution
     @↓ ℱ, 𝒢, P, K = solver
-    @↓ 𝜑, ϵ = solver.error_check
+    @↓ 𝜑, ϵ, Λ, updateΛ = solver.error_check
     # coarse guess
     G = similar(U)
     G[1] = U[1]
@@ -148,6 +148,8 @@ function parareal_serial!(solution::TimeParallelSolution, problem, solver::Parar
     F = similar(U)
     F[1] = U[1]
     for k = 1:K
+        # @↑ solution[k] = U .← U
+        solution[k].U .= U
         for n = 1:k-1
             solution[k][n] = solution[k-1][n]
         end
@@ -157,8 +159,11 @@ function parareal_serial!(solution::TimeParallelSolution, problem, solver::Parar
             solution[k][n] = chunk
             F[n+1] = chunk.u[end]
         end
+        solution[k].F .= F
+        # update Lipschitz constant
+        Λ = updateΛ ? update_Lipschitz(Λ, U, F) : Λ
         # check convergence
-        φ[k] = 𝜑(U, F, T)
+        φ[k] = 𝜑(solution, k, Λ)
         if φ[k] ≤ ϵ
             resize!(iterates, k)
             resize!(φ, k)

@@ -45,7 +45,7 @@ end
 end
 
 @userplot CONVERGENCE
-@recipe function f(h::CONVERGENCE)
+@recipe function f(h::CONVERGENCE; label = "")
     if length(h.args) != 1 || !(h.args[1] isa TimeParallelSolution)
         error("convergence must be given TimeParallelSolution. Got $(typeof(h.args))")
     elseif h.args[1] isa TimeParallelSolution
@@ -53,7 +53,6 @@ end
     end
     fontfamily      --> "Computer Modern"
     framestyle      --> :box
-    legend          --> :none
     gridalpha       --> 0.2
     linewidth       --> 1.5
     markershape     --> :circle
@@ -62,5 +61,8 @@ end
     tick_direction  --> :out
     yminorgrid      --> true
     yminorgridstyle --> :dash
-    solution.φ
+    @series begin
+        label := label
+        solution.φ
+    end
 end

@@ -2,7 +2,7 @@
 
 A Julia package implementing time-parallel methods.
 
-[![Docs Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://antonuccig.github.io/TimeParallel.jl/stable) [![Docs Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://antonuccig.github.io/TimeParallel.jl/dev) [![Build Status](https://img.shields.io/github/workflow/status/antonuccig/TimeParallel.jl/CI)](https://github.com/antonuccig/TimeParallel.jl/actions) [![Coverage](https://img.shields.io/codecov/c/github/antonuccig/TimeParallel.jl?label=coverage)](https://codecov.io/gh/antonuccig/TimeParallel.jl)
+[![Docs Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://giancarloantonucci.github.io/TimeParallel.jl/stable) [![Docs Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://giancarloantonucci.github.io/TimeParallel.jl/dev) [![Build Status](https://img.shields.io/github/workflow/status/giancarloantonucci/TimeParallel.jl/CI)](https://github.com/giancarloantonucci/TimeParallel.jl/actions) [![Coverage](https://img.shields.io/codecov/c/github/giancarloantonucci/TimeParallel.jl?label=coverage)](https://codecov.io/gh/giancarloantonucci/TimeParallel.jl)
 
 ## Installation
 
