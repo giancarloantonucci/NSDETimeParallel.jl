@@ -3,7 +3,7 @@ module TimeParallel
 export TimeParallelSolver
 export TimeParallelSolution
 export Parareal
-export 𝜑₁, 𝜑₂
+export ErrorCheck, 𝜑₁, 𝜑₂
 
 using Reexport
 using Distributed
