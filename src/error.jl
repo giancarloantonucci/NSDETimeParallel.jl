@@ -1,11 +1,11 @@
 function 𝜑₁(solution, k, Λ)
     @↓ T = solution
     @↓ U = solution[k]
-    k > 1 ? (@↓ W ← U = solution[k-1]) : (@↓ W ← F = solution[k])
+    k > 1 ? (@↓ V ← U = solution[k-1]) : (@↓ V ← F = solution[k])
     r = 0.0
     N = length(U)
     for n = 1:N
-        r += norm(U[n] - W[n]) / norm(U[n])
+        r += norm(U[n] - V[n]) / norm(U[n])
     end
     return r / N
 end
@@ -31,13 +31,14 @@ A composite type for the error control mechanism used by a [`TimeParallelSolver`
 
 # Constructors
 ```julia
-ErrorCheck(; 𝜑 = 𝜑₁, ϵ = 1e-12, Λ = 1.0)
+ErrorCheck(; 𝜑 = 𝜑₁, ϵ = 1e-12, Λ = 1.0, updateΛ = false)
 ```
 
 # Arguments
 - `𝜑 :: Function` : error control function.
 - `ϵ :: Real` : tolerance
 - `Λ :: Real` : Lipschitz constant of fine solver.
+- `updateΛ :: Bool`.
 
 # Functions
 - [`show`](@ref) : shows name and contents.
@@ -56,8 +57,8 @@ function update_Lipschitz(Λ, U, F)
     N = length(U)
     for i = 2:N-1
         tmp = norm(F[i+1] - F[i]) / norm(U[i] - U[i-1])
-        Λ = max(Λ, tmp)
         # Λ += norm(F[i+1] - F[i]) / norm(U[i] - U[i-1])
+        Λ = max(Λ, tmp)
     end
     # return max(1.0, Λ / (N-1))
     return max(1.0, Λ)

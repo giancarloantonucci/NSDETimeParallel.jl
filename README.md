@@ -14,67 +14,20 @@ TimeParallel is a [registered package](https://juliahub.com/ui/Search?q=TimePara
 
 ## Usage
 
-### Serial Mode (Default)
-
 ```julia
-using RungeKutta
-using TimeParallel
-using Plots
+using RungeKutta, TimeParallel
+using Plots, LaTeXStrings
 
 u0 = [2.0, 3.0, -14.0]
-tspan = (0.0, 1.0)
-problem = Lorenz(u0, tspan)
-finesolver = RK4(h = 1e-3)
-coarsolver = RK4(h = 1e-1)
-solver = Parareal(finesolver, coarsolver, P = 10)
+problem = Lorenz(u0, 0.0, 10.0)
+solver = Parareal(RK4(h = 1e-3), RK4(h = 1e-1), P = 10)
 solution = solve(problem, solver)
-plot(solution)
-# savefig("lorenz.svg")
+plot(solution, xlabel = L"t", label = [L"x" L"y" L"z"])
 ```
 
-![svg](images/lorenz.svg)
+![svg](imgs/lorenz.svg)
 
-### Distributed Mode
-
-```julia
-using Distributed
-using Hwloc
-addprocs(num_physical_cores() - nprocs()) # 36 here
-```
-
-```julia
-@everywhere begin
-    using Revise
-    using RungeKutta
-    using TimeParallel
-end
-using Plots
-using BenchmarkTools
-
-u0 = [2.0, 3.0, -14.0]
-tspan = (0.0, 10.0)
-problem = Lorenz(u0, tspan)
-finesolver = RK4(h = 1e-4)
-coarsolver = RK4(h = 1e-2)
-
-Np = 1:32
-tₛ = zeros(length(Np))
-tₚ = zeros(length(Np))
-for (i, p) in enumerate(Np)
-    solver = Parareal(finesolver, coarsolver, 𝜑 = 𝜑₂, P = p)
-    tₛ[i] = @belapsed solve($problem, $solver, mode = "SERIAL")
-    tₚ[i] = @belapsed solve($problem, $solver, mode = "DISTRIBUTED")
-end
-
-plot(Np, tₛ, marker = :o, xscale = :log10)
-plot!(Np, tₚ, marker = :o, xscale = :log10)
-plot!(xlabel = "Number of cores", ylabel = "Time (s)")
-plot!(framestyle = :box, gridalpha = 0.2, legend = :none)
-plot!(minorgrid = 0.1, minorgridstyle = :dash, tick_direction = :out)
-# savefig("timings.svg")
-```
-
-![svg](images/timings.svg)
+More in-depth details on usage are available in the [documentation](https://giancarloantonucci.github.io/TimeParallel.jl/dev).
 
 ## Available methods
 

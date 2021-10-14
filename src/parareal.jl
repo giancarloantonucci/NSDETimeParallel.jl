@@ -194,7 +194,7 @@ function parareal_distributed!(solution::TimeParallelSolution, problem, solver::
     # main loop
     F = similar(U)
     F[1] = U[1]
-    getF(args...) = ℱ(args...).u[end]
+    getF(args...) = ℱ(args...)
     for k = 1:K
         # @↑ solution[k] = U .← U
         solution[k].U .= U
@@ -203,7 +203,11 @@ function parareal_distributed!(solution::TimeParallelSolution, problem, solver::
         end
         # fine run (with Julia's Distributed.jl)
         @sync for n = k:P
-            @async F[n+1] = remotecall_fetch(getF, n, problem, U[n], T[n], T[n+1])
+            @async begin
+                chunk = remotecall_fetch(getF, n, problem, U[n], T[n], T[n+1])
+                solution[k][n] = chunk
+                F[n+1] = chunk.u[end]
+            end
         end
         solution[k].F .= F
         # update Lipschitz constant

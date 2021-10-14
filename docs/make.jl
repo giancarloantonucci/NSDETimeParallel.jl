@@ -12,5 +12,5 @@ makedocs(;
 )
 
 deploydocs(;
-    repo = "https://github.com/antonuccig/TimeParallel.jl"
+    repo = "https://github.com/giancarloantonucci/TimeParallel.jl"
 )

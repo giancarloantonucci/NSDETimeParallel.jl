@@ -1,6 +1,6 @@
 # TimeParallel.jl
 
-This is the documentation of [TimeParallel.jl](https://github.com/antonuccig/TimeParallel.jl), a Julia package implementing time-parallel methods.
+This is the documentation of [TimeParallel.jl](https://github.com/giancarloantonucci/TimeParallel.jl), a Julia package implementing time-parallel methods.
 
 ## Manual
 
