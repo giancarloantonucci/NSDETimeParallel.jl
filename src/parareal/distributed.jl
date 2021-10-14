@@ -12,7 +12,7 @@ function parareal_distributed!(solution::TimeParallelSolution, problem, solver::
     # main loop
     F = similar(U)
     F[1] = U[1]
-    getF(args...) = ℱ(args...)
+    getF(args...) = ℱ(args...).u[end]
     for k = 1:K
         # @↑ solution[k] = U .← U
         solution[k].U .= U
