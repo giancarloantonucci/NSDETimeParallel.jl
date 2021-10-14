@@ -150,9 +150,9 @@ function parareal_serial!(solution::TimeParallelSolution, problem, solver::Parar
     for k = 1:K
         # @↑ solution[k] = U .← U
         solution[k].U .= U
-        for n = 1:k-1
-            solution[k][n] = solution[k-1][n]
-        end
+        # for n = 1:k-1
+        #     solution[k][n] = solution[k-1][n]
+        # end
         # fine run (parallelisable)
         for n = k:P
             chunk = ℱ(problem, U[n], T[n], T[n+1])
@@ -198,16 +198,12 @@ function parareal_distributed!(solution::TimeParallelSolution, problem, solver::
     for k = 1:K
         # @↑ solution[k] = U .← U
         solution[k].U .= U
-        for n = 1:k-1
-            solution[k][n] = solution[k-1][n]
-        end
+        # for n = 1:k-1
+        #     solution[k][n] = solution[k-1][n]
+        # end
         # fine run (with Julia's Distributed.jl)
         @sync for n = k:P
-            @async begin
-                chunk = remotecall_fetch(getF, n, problem, U[n], T[n], T[n+1])
-                solution[k][n] = chunk
-                F[n+1] = chunk.u[end]
-            end
+            @async F[n+1] = remotecall_fetch(getF, n, problem, U[n], T[n], T[n+1])
         end
         solution[k].F .= F
         # update Lipschitz constant
