@@ -12,6 +12,8 @@ TimeParallel is a [registered package](https://juliahub.com/ui/Search?q=TimePara
 ]add TimeParallel
 ```
 
+Below is a brief introduction, but read the [documentation](https://giancarloantonucci.github.io/TimeParallel.jl/dev) for a complete overview of this package.
+
 ## Usage
 
 ```julia
@@ -26,8 +28,6 @@ plot(solution, xlabel = L"t", label = [L"x" L"y" L"z"])
 ```
 
 ![svg](imgs/lorenz.svg)
-
-More in-depth details on usage are available in the [documentation](https://giancarloantonucci.github.io/TimeParallel.jl/dev).
 
 ## Available methods
 

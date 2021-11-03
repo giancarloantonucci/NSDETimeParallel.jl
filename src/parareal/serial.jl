@@ -1,46 +1,54 @@
-function parareal_serial!(solution::TimeParallelSolution, problem, solver::Parareal)
-    @↓ iterates, φ, U, T = solution
-    @↓ ℱ, 𝒢, P, K = solver
-    @↓ 𝜑, ϵ, Λ, updateΛ = solver.error_check
-    # coarse guess
-    G = similar(U)
-    G[1] = U[1]
+function parareal_serial!(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
+    @↓ U, T, F, G = cache
+    @↓ errors, saveiterates = solution
+    @↓ u0, (t0, tN) ← tspan = problem
+    @↓ finesolver, coarsolver, P, K = parareal
+    @↓ weights, ψ, ϵ = parareal.control
+    T[1] = t0
     for n = 1:P
-        chunk = 𝒢(problem, U[n], T[n], T[n+1])
-        G[n+1] = chunk.u[end]
+        # stable sum
+        T[n+1] = (1-n) * t0 / P + n * tN / P
     end
-    # main loop
-    F = similar(U)
-    F[1] = U[1]
-    for k = 1:K
-        # @↑ solution[k] = U .← U
-        solution[k].U .= U
-        # for n = 1:k-1
-        #     solution[k][n] = solution[k-1][n]
-        # end
+    F[1] = G[1] = U[1] = u0
+    # coarse guess
+    for n = 1:P
+        chunkproblem = subproblemof(problem, U[n], T[n], T[n+1])
+        chunksolution = coarsolver(chunkproblem)
+        U[n+1] = chunksolution.u[end]
+    end
+    G .= U
+    for k in 1:K
+        if saveiterates
+            for n = 1:(k - 1)
+                solution[k][n] = solution[k-1][n]
+            end
+        end
         # fine run (parallelisable)
         for n = k:P
-            chunk = ℱ(problem, U[n], T[n], T[n+1])
-            solution[k][n] = chunk
-            F[n+1] = chunk.u[end]
+            chunkproblem = subproblemof(problem, U[n], T[n], T[n+1])
+            chunksolution = finesolver(chunkproblem)
+            F[n + 1] = chunksolution.u[end]
+            if saveiterates
+                solution[k][n] = chunksolution
+            else
+                solution[n] = chunksolution
+            end
         end
-        solution[k].F .= F
-        # update Lipschitz constant
-        Λ = updateΛ ? update_Lipschitz(Λ, U, F) : Λ
         # check convergence
-        φ[k] = 𝜑(solution, k, Λ)
-        if φ[k] ≤ ϵ
-            resize!(iterates, k)
-            resize!(φ, k)
+        update!(weights, U, F)
+        errors[k] = ψ(cache, solution, k, weights)
+        if errors[k] ≤ ϵ
+            resize!(errors, k)
+            resize!(solution, k)
             break
         end
-        # update (serial)
+        # serial update
         for n = k:P
-            chunk = 𝒢(problem, U[n], T[n], T[n+1])
-            U[n+1] = chunk.u[end] + F[n+1] - G[n+1]
-            G[n+1] = chunk.u[end]
+            chunkproblem = subproblemof(problem, U[n], T[n], T[n+1])
+            chunksolution = coarsolver(chunkproblem)
+            U[n+1] = chunksolution.u[end] + F[n+1] - G[n+1]
+            G[n+1] = chunksolution.u[end]
         end
-        @↑ solution = U, T
     end
     return solution
 end

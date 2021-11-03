@@ -1,13 +1,17 @@
 """
-    solve!(solution::TimeParallelSolution, problem, solver::TimeParallelSolver; kwargs...) :: TimeParallelSolution
+    solve!(solution::AbstractTimeParallelSolution, problem, solver::AbstractTimeParallelSolver; kwargs...) :: AbstractTimeParallelSolution
 
-returns the [`TimeParallelSolution`](@ref) of a problem, e.g. an [`InitialValueProblem`](@ref).
+returns the [`AbstractTimeParallelSolution`](@ref) of an [`AbstractInitialValueProblem`](@ref).
 """
-NSDEBase.solve!(solution::TimeParallelSolution, problem, solver::TimeParallelSolver; kwargs...) = solver(solution, problem; kwargs...)
+function NSDEBase.solve!(solution::AbstractTimeParallelSolution, problem::AbstractInitialValueProblem, solver::AbstractTimeParallelSolver; kwargs...)
+    return solver(solution, problem; kwargs...)
+end
 
 """
-    solve(problem, solver::TimeParallelSolver; kwargs...) :: TimeParallelSolution
+    solve(problem, solver::AbstractTimeParallelSolver; kwargs...) :: AbstractTimeParallelSolution
 
-returns the [`TimeParallelSolution`](@ref) of a problem, e.g. an [`InitialValueProblem`](@ref).
+returns the [`AbstractTimeParallelSolution`](@ref) of an [`AbstractInitialValueProblem`](@ref).
 """
-NSDEBase.solve(problem, solver::TimeParallelSolver; kwargs...) = solver(problem; kwargs...)
+function NSDEBase.solve(problem::AbstractInitialValueProblem, solver::AbstractTimeParallelSolver; kwargs...)
+    return solver(problem; kwargs...)
+end

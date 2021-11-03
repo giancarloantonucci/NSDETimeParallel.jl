@@ -1,25 +1,32 @@
 module TimeParallel
 
-export TimeParallelSolver
-export TimeParallelSolution
-export Parareal
-export ErrorCheck, 𝜑₁, 𝜑₂
-
-using Reexport
 using Distributed
 using ArrowMacros
 using LinearAlgebra
-@reexport using NSDEBase
-import RungeKutta
+using NSDEBase
+using RungeKutta
 using RecipesBase
 
-include("solver.jl")
-include("iterate.jl")
-include("solution.jl")
+include("abstract.jl")
+include("weights.jl")
 include("error.jl")
-include("parareal.jl")
+include("parareal/parareal.jl")
+include("parareal/cache.jl")
+include("parareal/iterate.jl")
+include("parareal/solution.jl")
+include("parareal/coarse.jl")
+include("parareal/serial.jl")
+include("parareal/distributed.jl")
+include("parareal/mpi.jl")
+include("parareal/solve.jl")
 include("solve.jl")
-include("utils.jl")
-include("plot.jl")
+include("plotrecipes.jl")
+
+export AbstractTimeParallelSolver
+export AbstractTimeParallelSolution
+export Parareal
+export PararealSolution
+export ErrorControl, ErrorWeights
+export ψ₁, ψ₂
 
 end

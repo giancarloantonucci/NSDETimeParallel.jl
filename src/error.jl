@@ -1,7 +1,11 @@
-function 𝜑₁(solution, k, Λ)
-    @↓ T = solution
-    @↓ U = solution[k]
-    k > 1 ? (@↓ V ← U = solution[k-1]) : (@↓ V ← F = solution[k])
+function ψ₁(cache, solution, k, args...)
+    @↓ U, T = cache
+    # if k > 1
+    #     V = getU(solution[k-1])
+    #     # @↓ V ← U = getU(solution[k-1])
+    # else
+    @↓ V ← F = cache
+    # end
     r = 0.0
     N = length(U)
     for n = 1:N
@@ -10,74 +14,42 @@ function 𝜑₁(solution, k, Λ)
     return r / N
 end
 
-function 𝜑₂(solution, k, Λ)
-    @↓ T = solution
-    @↓ U, F = solution[k]
-    Λ = max(1.0, Λ)
+function ψ₂(cache, solution, k, weights)
+    @↓ U, T, F = cache
+    @↓ w = weights
+    w = max(1.0, w)
     r = 0.0
     N = length(U)
     for n = 1:N
-        # Wₙ = exp(λ * (T[1] - T[n]))
-        Wₙ = Λ ^ (T[1] - T[n])
+        Wₙ = w^(T[1] - T[n])
         r += norm(Wₙ * (U[n] - F[n]))
     end
     return r / N
 end
 
 """
-    ErrorCheck
+    ErrorControl <: AbstractTimeParallelParameters
 
-A composite type for the error control mechanism used by a [`TimeParallelSolver`](@ref).
+A composite type for the error control mechanism of an [`AbstractTimeParallelSolver`](@ref).
 
 # Constructors
 ```julia
-ErrorCheck(; 𝜑 = 𝜑₁, ϵ = 1e-12, Λ = 1.0, updateΛ = false)
+ErrorControl(; ϵ=1e-12, ψ=ψ₁, weights=ErrorWeights())
 ```
 
 # Arguments
-- `𝜑 :: Function` : error control function.
 - `ϵ :: Real` : tolerance
-- `Λ :: Real` : Lipschitz constant of fine solver.
-- `updateΛ :: Bool`.
+- `ψ :: Function` : error function.
+- `weights :: ErrorWeights` : weights for ψ.
 
 # Functions
 - [`show`](@ref) : shows name and contents.
 - [`summary`](@ref) : shows name.
 """
-struct ErrorCheck{𝜑_T, ϵ_T, Λ_T, updateΛ_T}
-    𝜑::𝜑_T
+struct ErrorControl{ϵ_T, ψ_T, weights_T} <: AbstractTimeParallelParameters
     ϵ::ϵ_T
-    Λ::Λ_T
-    updateΛ::updateΛ_T
+    ψ::ψ_T
+    weights::weights_T
 end
 
-ErrorCheck(; 𝜑 = 𝜑₁, ϵ = 1e-12, Λ = 1.0, updateΛ = false) = ErrorCheck(𝜑, ϵ, Λ, updateΛ)
-
-function update_Lipschitz(Λ, U, F)
-    N = length(U)
-    for i = 2:N-1
-        tmp = norm(F[i+1] - F[i]) / norm(U[i] - U[i-1])
-        # Λ += norm(F[i+1] - F[i]) / norm(U[i] - U[i-1])
-        Λ = max(Λ, tmp)
-    end
-    # return max(1.0, Λ / (N-1))
-    return max(1.0, Λ)
-end
-
-# ---------------------------------------------------------------------------- #
-#                                   Functions                                  #
-# ---------------------------------------------------------------------------- #
-
-"""
-    show(io::IO, error_check::ErrorCheck)
-
-prints a full description of `error_check` and its contents to a stream `io`.
-"""
-Base.show(io::IO, error_check::ErrorCheck) = NSDEBase._show(io, error_check)
-
-"""
-    summary(io::IO, error_check::ErrorCheck)
-
-prints a brief description of `error_check` to a stream `io`.
-"""
-Base.summary(io::IO, error_check::ErrorCheck) = NSDEBase._summary(io, error_check)
+ErrorControl(; ϵ=1e-12, ψ=ψ₁, weights=ErrorWeights()) = ErrorControl(ϵ, ψ, weights)

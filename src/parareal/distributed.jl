@@ -1,5 +1,5 @@
-function parareal_distributed!(solution::TimeParallelSolution, problem, solver::Parareal)
-    @↓ iterates, φ, U, T = solution
+function parareal_distributed!(cache::PararealCache, solution::PararealSolution, problem, solver::Parareal; savechunks::Bool = false)
+    @↓ iterates, ψ, U, T = solution
     @↓ ℱ, 𝒢, P, K = solver
     @↓ 𝜑, ϵ, Λ, updateΛ = solver.error_check
     # coarse guess
@@ -27,10 +27,10 @@ function parareal_distributed!(solution::TimeParallelSolution, problem, solver::
         # update Lipschitz constant
         Λ = updateΛ ? update_Lipschitz(Λ, U, F) : Λ
         # check convergence
-        φ[k] = 𝜑(solution, k, Λ)
-        if φ[k] ≤ ϵ
+        ψ[k] = 𝜑(solution, k, Λ)
+        if ψ[k] ≤ ϵ
             resize!(iterates, k)
-            resize!(φ, k)
+            resize!(ψ, k)
             break
         end
         # update (serial)
