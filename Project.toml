@@ -12,7 +12,7 @@ RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 RungeKutta = "3978d399-9848-4322-9a48-ca26b732c7dc"
 
 [compat]
-ArrowMacros = "0.1"
+ArrowMacros = "0.1, 0.2"
 NSDEBase = "0.2"
 RecipesBase = "0.7.0, 0.8, 1.0"
 julia = "1"
