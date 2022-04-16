@@ -1,3 +1,4 @@
+"standard error function."
 function ψ₁(cache, solution, k, args...)
     @↓ U, T = cache
     # if k > 1
@@ -14,6 +15,7 @@ function ψ₁(cache, solution, k, args...)
     return r / N
 end
 
+"λ-motivated error function."
 function ψ₂(cache, solution, k, weights)
     @↓ U, T, F = cache
     @↓ w = weights
@@ -28,28 +30,24 @@ function ψ₂(cache, solution, k, weights)
 end
 
 """
-    ErrorControl <: AbstractTimeParallelParameters
+    Tolerance <: AbstractTolerance
 
-A composite type for the error control mechanism of an [`AbstractTimeParallelSolver`](@ref).
+A composite type for the tolerance mechanism of an time-parallel solver.
 
 # Constructors
 ```julia
-ErrorControl(; ϵ=1e-12, ψ=ψ₁, weights=ErrorWeights())
+Tolerance(ϵ, ψ, weights)
+Tolerance(; ϵ=1e-12, ψ=ψ₁, weights=Weights())
 ```
 
-# Arguments
-- `ϵ :: Real` : tolerance
+## Arguments
+- `ϵ :: Real` : tolerance.
 - `ψ :: Function` : error function.
-- `weights :: ErrorWeights` : weights for ψ.
-
-# Functions
-- [`show`](@ref) : shows name and contents.
-- [`summary`](@ref) : shows name.
+- `weights :: Weights` : weights for ψ.
 """
-struct ErrorControl{ϵ_T, ψ_T, weights_T} <: AbstractTimeParallelParameters
+struct Tolerance{ϵ_T<:Real, ψ_T<:Function, weights_T<:Weights} <: AbstractTolerance
     ϵ::ϵ_T
     ψ::ψ_T
     weights::weights_T
 end
-
-ErrorControl(; ϵ=1e-12, ψ=ψ₁, weights=ErrorWeights()) = ErrorControl(ϵ, ψ, weights)
+Tolerance(; ϵ::Real=1e-12, ψ::Function=ψ₁, weights::Weights=Weights()) = Tolerance(ϵ, ψ, weights)

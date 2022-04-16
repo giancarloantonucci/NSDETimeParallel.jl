@@ -1,4 +1,5 @@
-function parareal_distributed!(cache::PararealCache, solution::PararealSolution, problem, solver::Parareal; savechunks::Bool = false)
+"Distributed implementation of Parareal."
+function parareal_distributed!(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
     @↓ iterates, ψ, U, T = solution
     @↓ ℱ, 𝒢, P, K = solver
     @↓ 𝜑, ϵ, Λ, updateΛ = solver.error_check

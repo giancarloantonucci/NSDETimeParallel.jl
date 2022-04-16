@@ -12,13 +12,25 @@ Depth = 3
 
 All exported types and functions are considered part of the public API and thus documented in this manual.
 
-### Types
+### Abstract types
 
 ```@docs
-ErrorCheck
-TimeParallelSolver
-TimeParallelIterate
-TimeParallelSolution
+AbstractTimeParallelSolver
+AbstractTimeParallelSolution
+AbstractTimeParallelIterate
+AbstractTimeParallelCache
+AbstractTimeParallelParameters
+```
+
+### Composite types
+
+```@docs
+Parareal
+Tolerance
+Weights
+PararealIterate
+PararealSolution
+PararealCache
 ```
 
 ### Functions
@@ -29,16 +41,17 @@ solve!
 coarseguess!
 ```
 
-### Solvers
-
-```@docs
-Parareal
-```
-
 ### Utilities
 
 ```@docs
-getchunks
+ψ₁
+ψ₂
+update!
+getindex
+lastindex
+length
+resize!
+setindex!
 ```
 
 ## Index

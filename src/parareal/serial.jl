@@ -1,37 +1,28 @@
+"Serial implementation of Parareal."
 function parareal_serial!(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
-    @↓ U, T, F, G = cache
-    @↓ errors, saveiterates = solution
-    @↓ u0, (t0, tN) ← tspan = problem
+    @↓ U, F, G, T = cache
+    @↓ errors, alliterates, saveiterates = solution
     @↓ finesolver, coarsolver, P, K = parareal
-    @↓ weights, ψ, ϵ = parareal.control
-    T[1] = t0
-    for n = 1:P
-        # stable sum
-        T[n+1] = (1-n) * t0 / P + n * tN / P
-    end
-    F[1] = G[1] = U[1] = u0
-    # coarse guess
-    for n = 1:P
-        chunkproblem = subproblemof(problem, U[n], T[n], T[n+1])
-        chunksolution = coarsolver(chunkproblem)
-        U[n+1] = chunksolution.u[end]
-    end
-    G .= U
+    @↓ weights, ψ, ϵ = parareal.tolerance
+    # coarse run (serial)
+    # ...outside
+    # main loop
+    F[1] = U[1]
     for k in 1:K
-        if saveiterates
-            for n = 1:(k - 1)
-                solution[k][n] = solution[k-1][n]
-            end
-        end
         # fine run (parallelisable)
         for n = k:P
             chunkproblem = subproblemof(problem, U[n], T[n], T[n+1])
             chunksolution = finesolver(chunkproblem)
-            F[n + 1] = chunksolution.u[end]
-            if saveiterates
-                solution[k][n] = chunksolution
-            else
-                solution[n] = chunksolution
+            solution[n] = chunksolution
+            n < P ? F[n+1] = chunksolution.u[end] : nothing
+        end
+        # save iterates
+        if saveiterates
+            for n = 1:k-1
+                alliterates[k][n] = alliterates[k-1][n]
+            end
+            for n = k:P
+                alliterates[k][n] = solution[n]
             end
         end
         # check convergence
@@ -39,11 +30,13 @@ function parareal_serial!(cache::PararealCache, solution::PararealSolution, prob
         errors[k] = ψ(cache, solution, k, weights)
         if errors[k] ≤ ϵ
             resize!(errors, k)
-            resize!(solution, k)
+            if saveiterates
+                resize!(alliterates, k)
+            end
             break
         end
         # serial update
-        for n = k:P
+        for n = k:P-1
             chunkproblem = subproblemof(problem, U[n], T[n], T[n+1])
             chunksolution = coarsolver(chunkproblem)
             U[n+1] = chunksolution.u[end] + F[n+1] - G[n+1]
