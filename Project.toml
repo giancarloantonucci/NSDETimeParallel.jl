@@ -1,7 +1,7 @@
 name = "TimeParallel"
 uuid = "be6fae49-30d2-4092-b236-0bef8b98bcec"
 authors = ["Giancarlo A. Antonucci"]
-version = "0.1.0"
+version = "0.1.1"
 
 [compat]
 julia = "1"
