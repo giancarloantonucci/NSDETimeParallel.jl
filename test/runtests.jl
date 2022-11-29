@@ -1,14 +1,6 @@
 using TimeParallel
 using Test
 
-@testset "ErrorControl" begin
-    # Write your tests here.
-end
-
-@testset "Coarse" begin
-    # Write your tests here.
-end
-
-@testset "Parareal" begin
+@testset "TimeParallel" begin
     # Write your tests here.
 end
