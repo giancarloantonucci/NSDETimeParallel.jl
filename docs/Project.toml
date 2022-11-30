@@ -1,3 +1,5 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-NSDETimeParallel = "589f7035-6b7a-40e5-abe3-32909204d25a"
+
+[compat]
+Documenter = "0.27"
