@@ -1,16 +1,25 @@
+using NSDETimeParallel
 using Documenter
-using TimeParallel
 
-PAGES = ["Home" => "index.md"]
+DocMeta.setdocmeta!(NSDETimeParallel, :DocTestSetup, :(using NSDETimeParallel); recursive=true)
 
 makedocs(;
-    sitename = "TimeParallel.jl",
-    format = Documenter.HTML(),
-    modules = [TimeParallel],
-    pages = PAGES,
-    authors = "Giancarlo A. Antonucci <giancarlo.antonucci@icloud.com>"
+    modules=[NSDETimeParallel],
+    authors="Giancarlo A. Antonucci",
+    repo="https://github.com/giancarloantonucci/NSDETimeParallel.jl/blob/{commit}{path}#{line}",
+    sitename="NSDETimeParallel.jl",
+    format=Documenter.HTML(;
+        prettyurls=get(ENV, "CI", "false") == "true",
+        canonical="https://giancarloantonucci.github.io/NSDETimeParallel.jl",
+        edit_link="main",
+        assets=String[],
+    ),
+    pages=[
+        "Home" => "index.md",
+    ],
 )
 
 deploydocs(;
-    repo = "https://github.com/giancarloantonucci/TimeParallel.jl"
+    repo="github.com/giancarloantonucci/NSDETimeParallel.jl",
+    devbranch="main",
 )

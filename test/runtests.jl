@@ -1,6 +1,6 @@
-using TimeParallel
+using NSDETimeParallel
 using Test
 
-@testset "TimeParallel" begin
+@testset "NSDETimeParallel.jl" begin
     # Write your tests here.
 end
