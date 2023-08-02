@@ -2,7 +2,7 @@
 
 A Julia package implementing time-parallel methods.
 
-[![Docs Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://giancarloantonucci.github.io/NSDETimeParallel.jl/dev) [![Build Status](https://img.shields.io/github/workflow/status/giancarloantonucci/NSDETimeParallel.jl/CI)](https://github.com/giancarloantonucci/NSDETimeParallel.jl/actions) [![Coverage](https://img.shields.io/codecov/c/github/giancarloantonucci/NSDETimeParallel.jl?label=coverage)](https://codecov.io/gh/giancarloantonucci/NSDETimeParallel.jl)
+[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://giancarloantonucci.github.io/NSDETimeParallel.jl/dev) ![Build Status](https://img.shields.io/github/actions/workflow/status/giancarloantonucci/NSDETimeParallel.jl/CI.yml) ![Coverage Status](https://img.shields.io/codecov/c/github/giancarloantonucci/NSDETimeParallel.jl)
 
 ## Installation
 
