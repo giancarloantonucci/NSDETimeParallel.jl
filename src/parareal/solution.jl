@@ -17,7 +17,7 @@ PararealSolution(problem::AbstractInitialValueProblem, parareal::Parareal)
 # Functions
 - [`firstindex`](@ref) : first index.
 - [`getindex`](@ref) : get iterate.
-- [`lasterror`](@ref) : last iteration error.
+- [`converror`](@ref) : iteration error.
 - [`lastindex`](@ref) : last index.
 - [`length`](@ref) : number of iterates.
 - [`setindex!`](@ref) : set iterate.
@@ -86,18 +86,12 @@ returns the last index of `solution`.
 Base.lastindex(solution::PararealSolution) = lastindex(solution.lastiterate)
 
 """
-    ktherror(solution::PararealSolution, k::Integer)
+    converror(solution::PararealSolution[, k::Integer])
 
-returns the convergence error for the `k`-th iterate of `solution`.
+returns the convergence error for the `k`-th iterate of `solution`. If `k` is unused, than it the convergence error for the last iterate.
 """
-ktherror(solution::PararealSolution, k::Integer) = solution.errors[k]
-
-"""
-    lasterror(solution::PararealSolution)
-
-returns the convergence error for the last iterate of `solution`.
-"""
-lasterror(solution::PararealSolution) = solution.errors[end]
+converror(solution::PararealSolution, k::Integer) = solution.errors[k]
+converror(solution::PararealSolution) = solution.errors[end]
 
 """
     TimeParallelSolution(problem::AbstractInitialValueProblem, parareal::Parareal)

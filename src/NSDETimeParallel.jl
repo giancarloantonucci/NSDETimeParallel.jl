@@ -38,6 +38,6 @@ export Tolerance, Weights
 export TimeParallelSolution
 export coarseguess, coarseguess!
 export ψ₁, ψ₂
-export ktherror, lasterror, Wnorm
+export converror, Wnorm
 
 end
