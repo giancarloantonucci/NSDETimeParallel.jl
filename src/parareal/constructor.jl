@@ -1,7 +1,7 @@
 """
     Parareal <: AbstractTimeParallelSolver
 
-A composite type for the parareal algorithm.
+A composite type for the Parareal algorithm.
 
 # Constructors
 ```julia
@@ -10,18 +10,18 @@ Parareal(finesolver, coarsolver; tolerance=Tolerance(), parameters=PararealParam
 ```
 
 ## Arguments
-- `finesolver :: AbstractInitialValueSolver` : fine solver.
-- `coarsolver :: AbstractInitialValueSolver` : coarse solver.
-- `parameters :: AbstractPararealParameters` : basic parameters.
+- `finesolver :: AbstractInitialValueSolver` : fine solver (accurate but expensive).
+- `coarsolver :: AbstractInitialValueSolver` : coarse solver (rough but quick).
+- `parameters :: AbstractPararealParameters` : parameters for the correction step.
 - `tolerance :: AbstractTolerance` : tolerance and error mechanism.
-- `saveiterates :: Bool` : flags when to save all the Parareal iterates.
+- `saveiterates :: Bool` : save all the Parareal iterates if `true`.
 
 # Methods
 
     (parareal::Parareal)(solution::PararealSolution, problem::AbstractInitialValueProblem; mode::String="SERIAL", saveiterates::Bool=false)
     (parareal::Parareal)(problem::AbstractInitialValueProblem; mode::String="SERIAL", saveiterates::Bool=false)
 
-returns the `solution` of a `problem` using `parareal`. `mode` selects the implementations, `saveiterates` flags when to save all iterates into `solution.iterates`.
+returns the `solution` of a `problem` using `parareal`. `mode` selects the implementation, `saveiterates` flags whether to save all iterates in `solution.iterates`.
 """
 struct Parareal{finesolver_T<:AbstractInitialValueSolver, coarsolver_T<:AbstractInitialValueSolver, parameters_T<:AbstractPararealParameters, tolerance_T<:AbstractTolerance, saveiterates_T<:Bool} <: AbstractTimeParallelSolver
     finesolver::finesolver_T
