@@ -1,46 +1,81 @@
 "Distributed implementation of Parareal."
 function parareal_distributed!(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
-    # @↓ iterates, ψ, U, T = solution
-    # @↓ ℱ, 𝒢, P, K = solver
-    # @↓ 𝜑, ϵ, Λ, updateΛ = solver.error_check
-    # # coarse guess
-    # G = similar(U)
-    # G[1] = U[1]
-    # for n = 1:P
-    #     chunk = 𝒢(problem, U[n], T[n], T[n+1])
-    #     G[n+1] = chunk.u[end]
-    # end
-    # # main loop
-    # F = similar(U)
-    # F[1] = U[1]
-    # getF(args...) = ℱ(args...).u[end]
-    # for k = 1:K
-    #     # @↑ solution[k] = U .← U
-    #     solution[k].U .= U
-    #     # for n = 1:k-1
-    #     #     solution[k][n] = solution[k-1][n]
-    #     # end
-    #     # fine run (with Julia's Distributed.jl)
-    #     @sync for n = k:P
-    #         @async F[n+1] = remotecall_fetch(getF, n, problem, U[n], T[n], T[n+1])
-    #     end
-    #     solution[k].F .= F
-    #     # update Lipschitz constant
-    #     Λ = updateΛ ? update_Lipschitz(Λ, U, F) : Λ
-    #     # check convergence
-    #     ψ[k] = 𝜑(solution, k, Λ)
-    #     if ψ[k] ≤ ϵ
-    #         resize!(iterates, k)
-    #         resize!(ψ, k)
-    #         break
-    #     end
-    #     # update (serial)
-    #     for n = k:P
-    #         chunk = 𝒢(problem, U[n], T[n], T[n+1])
-    #         U[n+1] = chunk.u[end] + F[n+1] - G[n+1]
-    #         G[n+1] = chunk.u[end]
-    #     end
-    #     @↑ solution = U, T
-    # end
-    # return solution
+  @↓ skips, U, F, G, T = cache
+  @↓ errors, iterates = solution
+  @↓ finesolver, coarsolver, saveiterates = parareal
+  @↓ N, K = parareal.parameters
+  @↓ weights, ψ, ϵ = parareal.tolerance
+
+  # coarse run (serial)
+  for n = 1:N
+    if skips[n] # `skips[1] == true` always
+      G[n] = U[n]
+    else
+      chunkproblem = subproblemof(problem, U[n-1], T[n-1], T[n])
+      G[n] = coarsolver(chunkproblem)(T[n])
+    end
+  end
+
+  # initialization
+  F[1] = U[1]
+
+  # send fine solver function to procs
+  function finesolve(finesolver, chunkproblem)
+    chunksolution = finesolver(chunkproblem)
+    Uₚ = chunksolution.u[end]
+    return Uₚ, chunksolution
+  end
+
+  # main loop
+  for k in 1:K
+
+    # fine run (parallelised with Distributed.jl)
+    tasks = []
+    for worker_rank in procs()
+      n = worker_rank
+      chunkproblem = subproblemof(problem, U[n], T[n], T[n+1])
+      push!(tasks, remotecall(finesolve, n, finesolver, chunkproblem))
+    end
+
+    fineresults = fetch.(tasks)
+
+    for n = k:N
+      solution[n] = fineresults[n][2]
+      if n < N
+        F[n+1] = fineresults[n][1]
+      end
+    end
+
+    # save iterates
+    if saveiterates
+      for n = 1:k-1
+        iterates[k][n] = iterates[k-1][n]
+      end
+      for n = k:N
+        iterates[k][n] = solution[n]
+      end
+    end
+
+    # check convergence
+    update!(weights, U, F)
+    errors[k] = ψ(cache, solution, k, weights)
+    if errors[k] ≤ ϵ
+      resize!(errors, k) # self-updates in solution
+      if saveiterates
+        resize!(iterates, k) # self-updates in solution
+      end
+      break
+    end
+
+    # correction step (serial)
+    for n = k:N-1
+      chunkproblem = subproblemof(problem, U[n], T[n], T[n+1])
+      chunksolution = coarsolver(chunkproblem)
+      v = chunksolution(T[n+1])
+      U[n+1] = v + F[n+1] - G[n+1]
+      G[n+1] = v
+    end
+  end
+
+  return solution
 end
