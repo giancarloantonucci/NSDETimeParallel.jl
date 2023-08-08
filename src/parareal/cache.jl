@@ -1,4 +1,4 @@
-struct PararealCache{skips_T<:AbstractVector{<:Bool}, U_T<:(AbstractVector{𝕍} where 𝕍<:AbstractVector{ℂ} where ℂ<:Number), F_T<:(AbstractVector{𝕍} where 𝕍<:AbstractVector{ℂ} where ℂ<:Number), G_T<:(AbstractVector{𝕍} where 𝕍<:AbstractVector{ℂ} where ℂ<:Number), T_T<:(AbstractVector{ℂ} where ℂ<:Number)} <: AbstractTimeParallelCache
+struct PararealCache{skips_T<:AbstractVector{<:Bool}, U_T<:AbstractVector{<:AbstractVector{<:Number}}, F_T<:AbstractVector{<:AbstractVector{<:Number}}, G_T<:AbstractVector{<:AbstractVector{<:Number}}, T_T<:AbstractVector{<:Real}} <: AbstractTimeParallelCache
     skips::skips_T
     U::U_T
     F::F_T
