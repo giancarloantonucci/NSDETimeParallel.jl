@@ -31,7 +31,7 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
 
     # fine run (parallelised with Distributed.jl)
     tasks = []
-    for worker_rank in procs()
+    for worker_rank in k:N
       n = worker_rank
       chunkproblem = subproblemof(problem, U[n], T[n], T[n+1])
       push!(tasks, remotecall(finesolve, n, finesolver, chunkproblem))
