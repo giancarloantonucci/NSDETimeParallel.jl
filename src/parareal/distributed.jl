@@ -40,9 +40,9 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
     fineresults = fetch.(tasks)
 
     for n = k:N
-      solution[n] = fineresults[n][2]
+      solution[n] = fineresults[n-k+1][2]
       if n < N
-        F[n+1] = fineresults[n][1]
+        F[n+1] = fineresults[n-k+1][1]
       end
     end
 
