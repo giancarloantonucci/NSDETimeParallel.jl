@@ -32,8 +32,8 @@ end
     end
 end
 
-@recipe function f(wrappedobject::NSDEBase._PhasePlot{<:PararealIterate})
-    @↓ iterate ← object = wrappedobject
+@recipe function f(wrapper::NSDEBase._PhasePlot{<:PararealIterate})
+    @↓ iterate ← plottable = wrapper
     N = length(iterate)
     for n = 1:N
         @series begin
@@ -44,20 +44,20 @@ end
     end
 end
 
-@recipe function f(wrappedobject::NSDEBase._PhasePlot{<:PararealSolution})
-    @↓ solution ← object = wrappedobject
+@recipe function f(wrapper::NSDEBase._PhasePlot{<:PararealSolution})
+    @↓ solution ← plottable = wrapper
     @↓ lastiterate = solution
     return NSDEBase._PhasePlot(lastiterate)
 end
 
-@recipe function f(wrappedobject::NSDEBase._Convergence{<:PararealSolution})
+@recipe function f(wrapper::NSDEBase._Convergence{<:PararealSolution})
     gridalpha --> 0.2
     markershape --> :circle
     markerstrokewidth --> 0
     seriestype --> :path
     xticks --> 0:1000
     yticks --> 10.0 .^ (-100:100)
-    @↓ solution ← object = wrappedobject
+    @↓ solution ← plottable = wrapper
     @↓ errors = solution
     return errors
 end
