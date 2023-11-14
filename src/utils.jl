@@ -1,8 +1,8 @@
 # function NSDEBase.cost(problem::AbstractInitialValueProblem, solver::AbstractTimeParallelSolver, solution::AbstractTimeParallelSolution)
 #     @↓ (t0, tN) ← tspan = problem
-#     @↓ finesolver, coarsolver, N = solver
+#     @↓ finesolver, coarsesolver, N = solver
 #     @↓ hF ← h = finesolver.stepsize
-#     @↓ hG ← h = coarsolver.stepsize
+#     @↓ hG ← h = coarsesolver.stepsize
 #     ξ = hG / hF
 #     K = length(solution.errors)
 #     l = steplength(solution.lastiterate)

@@ -2,7 +2,7 @@
 function parareal_serial!(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
     @↓ skips, U, F, G, T = cache
     @↓ errors, iterates = solution
-    @↓ finesolver, coarsolver, saveiterates = parareal
+    @↓ finesolver, coarsesolver, saveiterates = parareal
     @↓ N, K = parareal.parameters
     @↓ weights, ψ, ϵ = parareal.tolerance
 
@@ -11,8 +11,8 @@ function parareal_serial!(cache::PararealCache, solution::PararealSolution, prob
         if skips[n] # `skips[1] == true` always
             G[n] = U[n]
         else
-            chunkproblem = subproblemof(problem, U[n-1], T[n-1], T[n])
-            G[n] = coarsolver(chunkproblem)(T[n])
+            chunkproblem = copy(problem, U[n-1], T[n-1], T[n])
+            G[n] = coarsesolver(chunkproblem)(T[n])
         end
     end
 
@@ -24,7 +24,7 @@ function parareal_serial!(cache::PararealCache, solution::PararealSolution, prob
 
         # fine run (parallelisable)
         for n = k:N
-            chunkproblem = subproblemof(problem, U[n], T[n], T[n+1])
+            chunkproblem = copy(problem, U[n], T[n], T[n+1])
             chunksolution = finesolver(chunkproblem)
             solution[n] = chunksolution
             if n < N
@@ -55,8 +55,8 @@ function parareal_serial!(cache::PararealCache, solution::PararealSolution, prob
 
         # correction step (serial)
         for n = k:N-1
-            chunkproblem = subproblemof(problem, U[n], T[n], T[n+1])
-            chunksolution = coarsolver(chunkproblem)
+            chunkproblem = copy(problem, U[n], T[n], T[n+1])
+            chunksolution = coarsesolver(chunkproblem)
             v = chunksolution(T[n+1])
             U[n+1] = v + F[n+1] - G[n+1]
             G[n+1] = v
