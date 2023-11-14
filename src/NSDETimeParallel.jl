@@ -22,7 +22,7 @@ include("parareal/distributed.jl")
 include("parareal/mpi.jl")
 include("parareal/solve.jl")
 include("solve.jl")
-include("plot.jl")
+include("plots_recipes.jl")
 
 export AbstractTimeParallelSolver
 export AbstractTimeParallelSolution
