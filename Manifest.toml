@@ -4,9 +4,9 @@
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 
 [[ArrowMacros]]
-git-tree-sha1 = "54a35cc8de705716f49dcb975c4f221f348309ae"
+git-tree-sha1 = "e4ff7b903a6b59c925862850542cc33bc0010186"
 uuid = "46a4b217-d1c8-4502-9c1a-7bf73a71908c"
-version = "0.2.1"
+version = "0.1.3"
 
 [[Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -71,12 +71,6 @@ version = "0.9.3"
 [[Downloads]]
 deps = ["ArgTools", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
-
-[[FiniteDifferences]]
-deps = ["ChainRulesCore", "LinearAlgebra", "Printf", "Random", "Richardson", "SparseArrays", "StaticArrays"]
-git-tree-sha1 = "d77e4697046989f44dce3ed66269aaf1611a3406"
-uuid = "26cc04aa-876d-5657-8c51-4c34ba976000"
-version = "0.12.31"
 
 [[ForwardDiff]]
 deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions", "StaticArrays"]
@@ -155,8 +149,8 @@ uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 
 [[NSDEBase]]
-deps = ["ArrowMacros", "FiniteDifferences", "ForwardDiff", "LinearAlgebra", "RecipesBase"]
-path = "../NSDEBase"
+deps = ["ArrowMacros", "ForwardDiff"]
+git-tree-sha1 = "286152c14df5641b70b08a0d8b8074d214d74ca8"
 uuid = "5aa61ba9-7752-4810-b2ec-484f26c3f007"
 version = "0.2.4"
 
@@ -217,12 +211,6 @@ version = "1.3.4"
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.2.2"
-
-[[Richardson]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "48f038bfd83344065434089c2a79417f38715c41"
-uuid = "708f8203-808e-40c0-ba2d-98a6953ed40d"
-version = "1.4.2"
 
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
