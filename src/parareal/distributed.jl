@@ -19,45 +19,56 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
     # initialization
     F[1] = U[1]
 
-    # send fine solver function to procs
-    function finesolve(finesolver, chunkproblem)
-        chunksolution = finesolver(chunkproblem)
-        Uₚ = chunksolution.u[end]
-        return Uₚ, chunksolution
-    end
+    # send fine solver function to procs (when parallelised with remotecall and fetch)
+    # function finesolve(finesolver, chunkproblem, saveiterates)
+    #     chunksolution = finesolver(chunkproblem)
+    #     Uₚ = chunksolution.u[end]
+    #     if saveiterates
+    #         return (Uₚ, chunksolution)
+    #     else
+    #         return Uₚ
+    #     end
+    # end
 
     # main loop
     for k in 1:K
 
-        # # fine run (parallelised with remotecall and fetch)
-        # tasks = Vector{Future}() # or just tasks = []
+        # fine run (parallelised with remotecall and fetch) NB: SLOWER!
+        # tasks = Vector{Future}()
         # for worker_rank in k:N
         #     n = worker_rank
         #     chunkproblem = copy(problem, U[n], T[n], T[n+1])
-        #     push!(tasks, remotecall(finesolve, n, finesolver, chunkproblem))
+        #     push!(tasks, remotecall(finesolve, n, finesolver, chunkproblem, saveiterates))
         # end
-
         # fineresults = fetch.(tasks)
-        # for n = k:N
-        #     solution[n] = fineresults[n-k+1][2]
-        #     if n < N
-        #         F[n+1] = fineresults[n-k+1][1]
+
+        # fine run (parallelised with distributed)
+        # combine(destination, source) = append!(destination, source)
+        # fineresults = @sync @distributed combine for worker_rank in k:N
+        #     n = worker_rank
+        #     chunkproblem = copy(problem, U[n], T[n], T[n+1])
+        #     chunksolution = finesolver(chunkproblem)
+        #     Uₚ = chunksolution(T[n+1])
+        #     if saveiterates
+        #         return [(Uₚ, chunksolution)]
+        #     else
+        #         return [Uₚ]
         #     end
         # end
 
-        # fine run (parallelised with Distributed.jl)
-        combine(destination, source) = append!(destination, source)
-        fineresults = @sync @distributed combine for worker_rank in k:N
+        # fine run (parallelised with pmap)
+        function finesolve(worker_rank)
             n = worker_rank
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
             chunksolution = finesolver(chunkproblem)
-            Uₚ = chunksolution(T[n+1])
+            Uₚ = chunksolution.u[end]
             if saveiterates
-                return [(Uₚ, chunksolution)]
+                return (Uₚ, chunksolution)
             else
-                return [Uₚ]
+                return Uₚ
             end
         end
+        fineresults = pmap(finesolve, WorkerPool(workers()[k:N]), k:N)
 
         for n = k:N
             if saveiterates
@@ -102,6 +113,7 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
             U[n+1] = v + F[n+1] - G[n+1]
             G[n+1] = v
         end
+
     end
 
     return solution
