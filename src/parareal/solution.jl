@@ -108,3 +108,10 @@ function Wnorm(solution::PararealSolution, reference::AbstractInitialValueSoluti
         return [Wnorm(solution.iterates[k], reference, w) for k = 1:K]
     end
 end
+
+function collect!(solution::PararealSolution)
+    N = length(solution.lastiterate)
+    for n = 1:N
+        solution[n] = @fetchfrom workers()[n] NSDETimeParallel.chunkfinesolution
+    end
+end

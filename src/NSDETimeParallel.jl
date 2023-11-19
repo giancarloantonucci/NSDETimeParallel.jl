@@ -1,7 +1,7 @@
 module NSDETimeParallel
 
-using Reexport
 using Distributed
+using Reexport
 using ArrowMacros
 using LinearAlgebra
 @reexport using NSDEBase
@@ -38,6 +38,6 @@ export Tolerance, Weights
 export TimeParallelSolution
 export coarseguess, coarseguess!
 export ψ₁, ψ₂
-export converror, Wnorm
+export converror, Wnorm, collect!
 
 end
