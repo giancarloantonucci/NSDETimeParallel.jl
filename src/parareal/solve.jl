@@ -3,10 +3,8 @@ function (parareal::Parareal)(cache::PararealCache, solution::PararealSolution, 
         parareal_serial!(cache, solution, problem, parareal)
     elseif nprocs() > 1 && mode == "DISTRIBUTED"
         parareal_distributed!(cache, solution, problem, parareal)
-    elseif nprocs() > 1 && mode == "MPI"
-        parareal_mpi!(cache, solution, problem, parareal)
     else
-        error("$mode is not available. Choose between: SERIAL, DISTRIBUTED, MPI.")
+        error("$mode is not available. Choose between `SERIAL` and `DISTRIBUTED`.")
     end
     return solution
 end
