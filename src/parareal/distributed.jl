@@ -44,8 +44,7 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
                 iterates[k][n] = iterates[k-1][n]
             end
             for n = k:N
-                solution[n] = @fetchfrom workers()[n] NSDETimeParallel.chunkfinesolution
-                iterates[k][n] = solution[n]
+                iterates[k][n] = @fetchfrom workers()[n] NSDETimeParallel.chunkfinesolution
             end
         end
 
