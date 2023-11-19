@@ -20,68 +20,22 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
     # initialization
     F[1] = U[1]
 
-    # send fine solver function to procs (when parallelised with remotecall and fetch)
-    # function finesolve(finesolver, chunkproblem, saveiterates)
-    #     chunksolution = finesolver(chunkproblem)
-    #     Uₚ = chunksolution.u[end]
-    #     if saveiterates
-    #         return (Uₚ, chunksolution)
-    #     else
-    #         return Uₚ
-    #     end
-    # end
-
     # main loop
     for k in 1:K
-
-        # fine run (parallelised with remotecall and fetch) NB: SLOWER!
-        # tasks = Vector{Future}()
-        # for worker_rank in k:N
-        #     n = worker_rank
-        #     chunkproblem = copy(problem, U[n], T[n], T[n+1])
-        #     push!(tasks, remotecall(finesolve, n, finesolver, chunkproblem, saveiterates))
-        # end
-        # fineresults = fetch.(tasks)
-
-        # fine run (parallelised with distributed)
-        # combine(destination, source) = append!(destination, source)
-        # fineresults = @sync @distributed combine for worker_rank in k:N
-        #     n = worker_rank
-        #     chunkproblem = copy(problem, U[n], T[n], T[n+1])
-        #     chunksolution = finesolver(chunkproblem)
-        #     Uₚ = chunksolution(T[n+1])
-        #     if saveiterates
-        #         return [(Uₚ, chunksolution)]
-        #     else
-        #         return [Uₚ]
-        #     end
-        # end
 
         # fine run (parallelised with pmap)
         function finesolve(worker_rank)
             n = worker_rank
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
+            global chunkfinesolution # save full chunk solution for later retrieval
             chunkfinesolution = finesolver(chunkproblem)
             Uₚ = chunkfinesolution(T[n+1])
-            if saveiterates
-                return (Uₚ, chunkfinesolution)
-            else
-                return Uₚ
-            end
+            return Uₚ
         end
         fineresults = pmap(finesolve, WorkerPool(workers()[k:N]), k:N)
 
-        for n = k:N
-            if saveiterates
-                solution[n] = fineresults[n-k+1][2]
-                if n < N
-                    F[n+1] = fineresults[n-k+1][1]
-                end
-            else
-                if n < N
-                    F[n+1] = fineresults[n-k+1]
-                end
-            end
+        for n = k:N-1
+            F[n+1] = fineresults[n-k+1]
         end
 
         # save iterates
@@ -90,6 +44,7 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
                 iterates[k][n] = iterates[k-1][n]
             end
             for n = k:N
+                solution[n] = @fetchfrom workers()[n] NSDETimeParallel.chunkfinesolution
                 iterates[k][n] = solution[n]
             end
         end
