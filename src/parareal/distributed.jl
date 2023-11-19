@@ -12,7 +12,8 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
         G[n] = U[n]
         else
         chunkproblem = copy(problem, U[n-1], T[n-1], T[n])
-        G[n] = coarsesolver(chunkproblem)(T[n])
+        chunkcoarsesolution = coarsesolver(chunkproblem)
+        G[n] = chunkcoarsesolution(T[n])
         end
     end
 
@@ -60,10 +61,10 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
         function finesolve(worker_rank)
             n = worker_rank
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
-            chunksolution = finesolver(chunkproblem)
-            Uₚ = chunksolution.u[end]
+            chunkfinesolution = finesolver(chunkproblem)
+            Uₚ = chunkfinesolution(T[n+1])
             if saveiterates
-                return (Uₚ, chunksolution)
+                return (Uₚ, chunkfinesolution)
             else
                 return Uₚ
             end
@@ -108,8 +109,8 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
         # correction step (serial)
         for n = k:N-1
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
-            chunksolution = coarsesolver(chunkproblem)
-            v = chunksolution(T[n+1])
+            chunkcoarsesolution = coarsesolver(chunkproblem)
+            v = chunkcoarsesolution(T[n+1])
             U[n+1] = v + F[n+1] - G[n+1]
             G[n+1] = v
         end

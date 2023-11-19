@@ -15,8 +15,8 @@ function coarseguess!(cache::PararealCache, problem::AbstractInitialValueProblem
     U[1] = u0
     for n = 1:N-1
         chunkproblem = copy(problem, U[n], T[n], T[n+1])
-        chunksolution = coarsesolver(chunkproblem)
-        U[n+1] = chunksolution(T[n+1])
+        chunkcoarsesolution = coarsesolver(chunkproblem)
+        U[n+1] = chunkcoarsesolution(T[n+1])
         skips[n+1] = true
     end
     return cache
