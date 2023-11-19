@@ -6,8 +6,6 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
     @↓ N, K = parareal.parameters
     @↓ weights, ψ, ϵ = parareal.tolerance
 
-    addprocs(N-1)
-
     # coarse run (serial)
     for n = 1:N
         if skips[n] # `skips[1] == true` always
@@ -31,20 +29,46 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
     # main loop
     for k in 1:K
 
+        # # fine run (parallelised with remotecall and fetch)
+        # tasks = Vector{Future}() # or just tasks = []
+        # for worker_rank in k:N
+        #     n = worker_rank
+        #     chunkproblem = copy(problem, U[n], T[n], T[n+1])
+        #     push!(tasks, remotecall(finesolve, n, finesolver, chunkproblem))
+        # end
+
+        # fineresults = fetch.(tasks)
+        # for n = k:N
+        #     solution[n] = fineresults[n-k+1][2]
+        #     if n < N
+        #         F[n+1] = fineresults[n-k+1][1]
+        #     end
+        # end
+
         # fine run (parallelised with Distributed.jl)
-        tasks = []
-        for worker_rank in k:N
+        combine(destination, source) = append!(destination, source)
+        fineresults = @sync @distributed combine for worker_rank in k:N
             n = worker_rank
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
-            push!(tasks, remotecall(finesolve, n, finesolver, chunkproblem))
+            chunksolution = finesolver(chunkproblem)
+            Uₚ = chunksolution(T[n+1])
+            if saveiterates
+                return [(Uₚ, chunksolution)]
+            else
+                return [Uₚ]
+            end
         end
 
-        fineresults = fetch.(tasks)
-
         for n = k:N
-            solution[n] = fineresults[n-k+1][2]
-            if n < N
-                F[n+1] = fineresults[n-k+1][1]
+            if saveiterates
+                solution[n] = fineresults[n-k+1][2]
+                if n < N
+                    F[n+1] = fineresults[n-k+1][1]
+                end
+            else
+                if n < N
+                    F[n+1] = fineresults[n-k+1]
+                end
             end
         end
 
@@ -66,6 +90,7 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
             if saveiterates
                 resize!(iterates, k) # self-updates in solution
             end
+
             break
         end
 
@@ -78,8 +103,6 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
             G[n+1] = v
         end
     end
-
-    rmprocs(workers())
 
     return solution
 end
