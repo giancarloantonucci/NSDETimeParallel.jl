@@ -50,6 +50,8 @@ end
 
 #---------------------------------- FUNCTIONS ----------------------------------
 
+TimeParallelSolution(problem::AbstractInitialValueProblem, parareal::Parareal) = PararealSolution(problem, parareal)
+
 """
     length(solution::PararealSolution)
 
