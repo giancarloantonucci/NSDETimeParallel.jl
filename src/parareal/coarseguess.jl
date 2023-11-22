@@ -1,10 +1,11 @@
 """
-    coarseguess!(cache::PararealCache, problem::AbstractInitialValueProblem, parareal::Parareal)
+    coarseguess!(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
 
 computes a coarse initial guess and stores the result into `cache.U`.
 """
-function coarseguess!(cache::PararealCache, problem::AbstractInitialValueProblem, parareal::Parareal)
-    @↓ skips, U, T = cache
+function coarseguess!(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
+    @↓ skips = cache
+    @↓ U, T = solution.lastiterate
     @↓ u0, (t0, tN) ← tspan = problem
     @↓ coarsesolver = parareal
     @↓ N = parareal.parameters
@@ -23,12 +24,12 @@ function coarseguess!(cache::PararealCache, problem::AbstractInitialValueProblem
 end
 
 """
-    coarseguess(problem::AbstractInitialValueProblem, parareal::Parareal)
+    coarseguess(solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
 
 computes the coarse solution of `problem` and stores the result into a [`PararealCache`](@ref).
 """
-function coarseguess(problem::InitialValueProblem, parareal::Parareal)
+function coarseguess(solution::PararealSolution, problem::InitialValueProblem, parareal::Parareal)
     cache = PararealCache(problem, parareal)
-    coarseguess!(cache, problem, parareal)
+    coarseguess!(cache, solution, problem, parareal)
     return cache
 end

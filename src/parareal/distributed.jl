@@ -1,7 +1,8 @@
 "Distributed implementation of Parareal."
 function parareal_distributed!(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
-    @↓ skips, U, F, G, T = cache
+    @↓ skips, F, G = cache
     @↓ errors, iterates = solution
+    @↓ U, T = solution.lastiterate
     @↓ finesolver, coarsesolver, saveiterates = parareal
     @↓ N, K = parareal.parameters
     @↓ weights, ψ, ϵ = parareal.tolerance
@@ -9,11 +10,11 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
     # coarse run (serial)
     for n = 1:N
         if skips[n] # `skips[1] == true` always
-        G[n] = U[n]
+            G[n] = U[n]
         else
-        chunkproblem = copy(problem, U[n-1], T[n-1], T[n])
-        chunkcoarsesolution = coarsesolver(chunkproblem)
-        G[n] = chunkcoarsesolution(T[n])
+            chunkproblem = copy(problem, U[n-1], T[n-1], T[n])
+            chunkcoarsesolution = coarsesolver(chunkproblem)
+            G[n] = chunkcoarsesolution(T[n])
         end
     end
 
@@ -40,6 +41,8 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
 
         # save iterates
         if saveiterates
+            iterates[k].U .= U
+            iterates[k].T .= T
             for n = 1:k-1
                 iterates[k][n] = iterates[k-1][n]
             end

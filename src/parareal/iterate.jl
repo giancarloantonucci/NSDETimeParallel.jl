@@ -22,14 +22,21 @@ PararealIterate(problem::AbstractInitialValueProblem, parareal::Parareal)
 
 returns the value of `iterate` at `t` via interpolation.
 """
-struct PararealIterate{chunks_T<:(AbstractVector{𝕊} where 𝕊<:AbstractInitialValueSolution)} <: AbstractTimeParallelIterate
+struct PararealIterate{U_T<:AbstractVector{<:AbstractVector{<:Number}}, T_T<:AbstractVector{<:Real}, chunks_T<:(AbstractVector{𝕊} where 𝕊<:AbstractInitialValueSolution)} <: AbstractTimeParallelIterate
+    U::U_T
+    T::T_T
     chunks::chunks_T
 end
 
 function PararealIterate(problem::AbstractInitialValueProblem, parareal::Parareal)
+    @↓ u0, t0 ← tspan[1] = problem
     @↓ N = parareal.parameters
+    U = Vector{typeof(u0)}(undef, N)
+    U[1] = u0
+    T = Vector{typeof(t0)}(undef, N+1)
+    T[1] = t0
     chunks = Vector{AbstractInitialValueSolution}(undef, N)
-    return PararealIterate(chunks)
+    return PararealIterate(U, T, chunks)
 end
 
 #----------------------------------- METHODS -----------------------------------
