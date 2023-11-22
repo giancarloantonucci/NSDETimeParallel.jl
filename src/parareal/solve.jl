@@ -11,18 +11,18 @@ end
 
 function (parareal::Parareal)(cache::PararealCache, problem::AbstractInitialValueProblem; mode::String="SERIAL")
     solution = PararealSolution(problem, parareal)
-    parareal(cache, solution, problem; mode=mode)
+    parareal(cache, solution, problem; mode)
     return solution
 end
 
 function (parareal::Parareal)(solution::PararealSolution, problem::AbstractInitialValueProblem; mode::String="SERIAL")
-    cache = coarseguess(problem, parareal)
-    parareal(cache, solution, problem; mode=mode)
+    cache = coarseguess(solution, problem, parareal)
+    parareal(cache, solution, problem; mode)
     return solution
 end
 
 function (parareal::Parareal)(problem::AbstractInitialValueProblem; mode::String="SERIAL")
     solution = PararealSolution(problem, parareal)
-    parareal(solution, problem; mode=mode)
+    parareal(solution, problem; mode)
     return solution
 end
