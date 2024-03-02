@@ -17,9 +17,9 @@ PararealSolution(problem::AbstractInitialValueProblem, parareal::Parareal)
 # Functions
 - [`firstindex`](@ref) : first index.
 - [`getindex`](@ref) : get iterate.
-- [`converror`](@ref) : iteration error.
 - [`lastindex`](@ref) : last index.
-- [`length`](@ref) : number of iterates.
+- [`numiterates`](@ref) : number of iterates.
+- [`numchunks`](@ref) : number of chunks of last iterate.
 - [`setindex!`](@ref) : set iterate.
 
 # Methods
@@ -58,6 +58,20 @@ returns the number of chunks of `solution`.
 Base.length(solution::PararealSolution) = length(solution.lastiterate)
 
 """
+    numchunks(solution::PararealSolution)
+
+returns the number of chunks of `solution`.
+"""
+numchunks(solution::PararealSolution) = numchunks(solution.lastiterate)
+
+"""
+    numiterates(solution::PararealSolution)
+
+returns the number of iterates of `solution`.
+"""
+numiterates(solution::PararealSolution) = length(solution.iterates)
+
+"""
     getindex(solution::PararealSolution, n::Integer)
 
 returns the `n`-th chunk of the last iteration of a [`PararealSolution`](@ref).
@@ -84,14 +98,6 @@ Base.firstindex(solution::PararealSolution) = firstindex(solution.lastiterate)
 returns the last index of `solution`.
 """
 Base.lastindex(solution::PararealSolution) = lastindex(solution.lastiterate)
-
-"""
-    converror(solution::PararealSolution[, k::Integer])
-
-returns the convergence error for the `k`-th iterate of `solution`. If `k` is unused, than it the convergence error for the last iterate.
-"""
-converror(solution::PararealSolution, k::Integer) = solution.errors[k]
-converror(solution::PararealSolution) = solution.errors[end]
 
 """
     TimeParallelSolution(problem::AbstractInitialValueProblem, parareal::Parareal)

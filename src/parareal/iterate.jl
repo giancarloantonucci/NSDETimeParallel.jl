@@ -14,6 +14,7 @@ PararealIterate(problem::AbstractInitialValueProblem, parareal::Parareal)
 - [`getindex`  ](@ref) : get chunk.
 - [`lastindex` ](@ref) : last index.
 - [`length`    ](@ref) : number of chunks.
+- [`numchunks` ](@ref) : number of chunks.
 - [`setindex!` ](@ref) : set chunk.
 
 # Methods
@@ -64,6 +65,13 @@ end
 returns the number of chunks of `iterate`.
 """
 Base.length(iterate::PararealIterate) = length(iterate.chunks)
+
+"""
+    numchunks(iterate::PararealIterate)
+
+returns the number of chunks of `iterate`.
+"""
+numchunks(iterate::PararealIterate) = length(iterate.chunks)
 
 """
     getindex(iterate::PararealIterate, n::Integer)
