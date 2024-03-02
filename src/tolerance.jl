@@ -1,12 +1,11 @@
 "standard error function."
-function ψ₁(cache, solution, k, args...)
+function ψ₁(cache, solution, k, weights, U_, args...)
     @↓ U, T = solution.lastiterate
-    # if k > 1
-    #     V = getU(solution[k-1])
-    #     # @↓ V ← U = getU(solution[k-1])
-    # else
-    @↓ V ← F = cache
-    # end
+    if k > 1
+        V = U_
+    else
+        @↓ V ← F = cache
+    end
     r = 0.0
     N = length(U)
     for n = 1:N
@@ -16,9 +15,9 @@ function ψ₁(cache, solution, k, args...)
 end
 
 "weighted error function."
-function ψ₂(cache, solution, k, weights)
-    @↓ F = cache
+function ψ₂(cache, solution, k, weights, args...)
     @↓ U, T = solution.lastiterate
+    @↓ F = cache
     @↓ w = weights
     w = max(1.0, w)
     r = 0.0

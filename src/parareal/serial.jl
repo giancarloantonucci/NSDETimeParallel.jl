@@ -7,6 +7,8 @@ function parareal_serial!(cache::PararealCache, solution::PararealSolution, prob
     @↓ N, K = parareal.parameters
     @↓ weights, ψ, ϵ = parareal.tolerance
 
+    U_ = copy(U) # used by standard conv check
+
     # coarse run (serial)
     for n = 1:N
         if skips[n] # `skips[1] == true` always
@@ -48,7 +50,7 @@ function parareal_serial!(cache::PararealCache, solution::PararealSolution, prob
 
         # check convergence
         update!(weights, U, F)
-        errors[k] = ψ(cache, solution, k, weights)
+        errors[k] = ψ(cache, solution, k, weights, U_)
         if errors[k] ≤ ϵ
             resize!(errors, k) # self-updates in solution
             if saveiterates
@@ -56,6 +58,8 @@ function parareal_serial!(cache::PararealCache, solution::PararealSolution, prob
             end
             break
         end
+
+        U_ .= U
 
         # correction step (serial)
         for n = k:N-1
