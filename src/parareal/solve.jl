@@ -1,5 +1,8 @@
 function (parareal::Parareal)(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem; mode::String="SERIAL")
     if nprocs() == 1 || mode == "SERIAL"
+        if !(mode == "SERIAL")
+            @warn "nprocs() is 1. Default to SERIAL mode instead."
+        end
         parareal_serial!(cache, solution, problem, parareal)
     elseif nprocs() > 1 && mode == "DISTRIBUTED"
         parareal_distributed!(cache, solution, problem, parareal)
