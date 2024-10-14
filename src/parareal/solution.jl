@@ -69,7 +69,7 @@ numchunks(solution::PararealSolution) = numchunks(solution.lastiterate)
 
 returns the number of iterates of `solution`.
 """
-numiterates(solution::PararealSolution) = length(solution.iterates)
+numiterates(solution::PararealSolution) = length(solution.errors)
 
 """
     getindex(solution::PararealSolution, n::Integer)

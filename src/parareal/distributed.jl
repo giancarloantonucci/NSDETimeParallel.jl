@@ -27,6 +27,7 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
     for k in 1:K
 
         # fine run (parallelised with pmap)
+        # docs: @distributed for many simple operations / pmap for few complex operations
         function finesolve(worker_rank)
             n = worker_rank
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
