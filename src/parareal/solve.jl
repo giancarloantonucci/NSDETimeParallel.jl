@@ -1,31 +1,32 @@
-function (parareal::Parareal)(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem; mode::String="SERIAL")
-    if nprocs() == 1 || mode == "SERIAL"
-        if !(mode == "SERIAL")
-            @warn "nprocs() is 1. Default to SERIAL mode instead."
-        end
+function (parareal::Parareal)(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem)
+    @↓ executionmode = parareal
+    if executionmode == "SERIAL"
         parareal_serial!(cache, solution, problem, parareal)
-    elseif nprocs() > 1 && mode == "DISTRIBUTED"
+    elseif nprocs() == 1 && !(executionmode == "SERIAL")
+        @warn "nprocs() is 1. Default to SERIAL executionmode instead."
+        parareal_serial!(cache, solution, problem, parareal)
+    elseif nprocs() > 1 && executionmode == "DISTRIBUTED"
         parareal_distributed!(cache, solution, problem, parareal)
     else
-        error("$mode is not available. Choose between `SERIAL` and `DISTRIBUTED`.")
+        error("$executionmode is not available. For now, choose between `SERIAL` and `DISTRIBUTED`.")
     end
     return solution
 end
 
-function (parareal::Parareal)(cache::PararealCache, problem::AbstractInitialValueProblem; mode::String="SERIAL")
+function (parareal::Parareal)(cache::PararealCache, problem::AbstractInitialValueProblem)
     solution = PararealSolution(problem, parareal)
-    parareal(cache, solution, problem; mode)
+    parareal(cache, solution, problem)
     return solution
 end
 
-function (parareal::Parareal)(solution::PararealSolution, problem::AbstractInitialValueProblem; mode::String="SERIAL")
+function (parareal::Parareal)(solution::PararealSolution, problem::AbstractInitialValueProblem)
     cache = coarseguess(solution, problem, parareal)
-    parareal(cache, solution, problem; mode)
+    parareal(cache, solution, problem)
     return solution
 end
 
-function (parareal::Parareal)(problem::AbstractInitialValueProblem; mode::String="SERIAL")
+function (parareal::Parareal)(problem::AbstractInitialValueProblem)
     solution = PararealSolution(problem, parareal)
-    parareal(solution, problem; mode)
+    parareal(solution, problem)
     return solution
 end

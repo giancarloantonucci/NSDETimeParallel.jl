@@ -14,21 +14,37 @@ Parareal(finesolver, coarsesolver; tolerance=Tolerance(), parameters=PararealPar
 - `coarsesolver :: AbstractInitialValueSolver` : coarse solver (rough but quick).
 - `parameters :: AbstractPararealParameters` : parameters for the correction step.
 - `tolerance :: AbstractTolerance` : tolerance and error mechanism.
+- `executionmode :: String` : algorithm's kind (`SERIAL`, `DISTRIBUTED`, `MPI`, etc.).
 - `saveiterates :: Bool` : save all the Parareal iterates if `true`.
 
 # Methods
 
-    (parareal::Parareal)(solution::PararealSolution, problem::AbstractInitialValueProblem; mode::String="SERIAL", saveiterates::Bool=false)
-    (parareal::Parareal)(problem::AbstractInitialValueProblem; mode::String="SERIAL", saveiterates::Bool=false)
+    (parareal::Parareal)(solution::PararealSolution, problem::AbstractInitialValueProblem; executionmode::String="SERIAL", saveiterates::Bool=false)
+    (parareal::Parareal)(problem::AbstractInitialValueProblem; executionmode::String="SERIAL", saveiterates::Bool=false)
 
-returns the `solution` of a `problem` using `parareal`. `mode` selects the implementation, `saveiterates` flags whether to save all iterates in `solution.iterates`.
+returns the `solution` of a `problem` using `parareal`. `executionmode` selects the implementation, `saveiterates` flags whether to save all iterates in `solution.iterates`.
 """
-struct Parareal{finesolver_T<:AbstractInitialValueSolver, coarsolver_T<:AbstractInitialValueSolver, parameters_T<:AbstractPararealParameters, tolerance_T<:AbstractTolerance, saveiterates_T<:Bool} <: AbstractTimeParallelSolver
+struct Parareal{
+    finesolver_T<:AbstractInitialValueSolver,
+    coarsolver_T<:AbstractInitialValueSolver,
+    parameters_T<:AbstractPararealParameters,
+    tolerance_T<:AbstractTolerance,
+    executionmode_T<:String,
+    saveiterates_T<:Bool,
+} <: AbstractTimeParallelSolver
     finesolver::finesolver_T
     coarsesolver::coarsolver_T
     parameters::parameters_T
     tolerance::tolerance_T
+    executionmode::executionmode_T
     saveiterates::saveiterates_T
 end
 
-Parareal(finesolver::AbstractInitialValueSolver, coarsesolver::AbstractInitialValueSolver; parameters::AbstractPararealParameters = PararealParameters(), tolerance::AbstractTolerance = Tolerance(), saveiterates::Bool = false) = Parareal(finesolver, coarsesolver, parameters, tolerance, saveiterates)
+Parareal(
+    finesolver::AbstractInitialValueSolver,
+    coarsesolver::AbstractInitialValueSolver;
+    parameters::AbstractPararealParameters=PararealParameters(),
+    tolerance::AbstractTolerance=Tolerance(),
+    executionmode::String="SERIAL",
+    saveiterates::Bool=false,
+) = Parareal(finesolver, coarsesolver, parameters, tolerance, executionmode, saveiterates)
