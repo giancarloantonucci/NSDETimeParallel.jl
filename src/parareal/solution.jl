@@ -120,4 +120,5 @@ function collect!(solution::PararealSolution)
     for n = 1:N
         solution[n] = @fetchfrom workers()[n] NSDETimeParallel.chunkfinesolution
     end
+    return solution
 end
