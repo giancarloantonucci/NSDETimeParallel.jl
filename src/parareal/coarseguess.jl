@@ -4,7 +4,7 @@
 # computes a coarse initial guess and stores the result into `cache.U`.
 # """
 # function coarseguess!(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
-#     @↓ skips, U, T = cache
+#     @↓ makeGs, U, T = cache
 #     @↓ u0, (t0, tN) ← tspan = problem
 #     # @↓ coarsesolver = parareal
 #     @↓ N = parareal.parameters
@@ -16,7 +16,7 @@
 #         # chunkproblem = copy(problem, U[n], T[n], T[n+1])
 #         # chunkcoarsesolution = coarsesolver(chunkproblem)
 #         # U[n+1] = chunkcoarsesolution(T[n+1])
-#         skips[n+1] = false
+#         makeGs[n+1] = false
 #     end
 #     return cache
 # end

@@ -48,17 +48,20 @@ end
 
 function (iterate::PararealIterate)(tₚ::Real)
     N = length(iterate)
-    if tₚ < iterate[1].t[1]
-        return iterate[1](tₚ)
-    end
+    # if tₚ < iterate[1].t[1]
+    #     return iterate[1](tₚ)
+    # end
     for n = 1:N
         if (n > 1 ? iterate[n-1].t[end] : iterate[n].t[1]) ≤ tₚ < iterate[n].t[end]
             return iterate[n](tₚ)
         end
     end
-    if tₚ ≥ iterate[N].t[end]
+    if tₚ == iterate[N].t[end]
         return iterate[N](tₚ)
     end
+    # if tₚ ≥ iterate[N].t[end]
+    #     return iterate[N](tₚ)
+    # end
 end
 # TODO: maybe add a flag iscollected to use one method or the other
 # function (iterate::PararealIterate)(tₚ::Real)

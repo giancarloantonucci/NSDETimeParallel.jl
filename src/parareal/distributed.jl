@@ -4,11 +4,11 @@ function parareal_distributed!(
     directory::String="results", saveiterates::Bool=false)
 
     # Extract components
-    @↓ skips, U, T, F, G = cache
-    @↓ errors = solution
     @↓ finesolver, coarsesolver = parareal
     @↓ N, K = parareal.parameters
     @↓ weights, ψ, ϵ = parareal.tolerance
+    @↓ makeGs, U, T, F, G = cache
+    @↓ errors = solution
 
     # Ensure directory exists (only rank 0 creates it)
     if !isdir(directory)
@@ -23,7 +23,7 @@ function parareal_distributed!(
         chunkproblem = copy(problem, U[n], T[n], T[n+1])
         chunkcoarsesolution = coarsesolver(chunkproblem)
         G[n+1] = chunkcoarsesolution(T[n+1])
-        if !skips[n+1]
+        if makeGs[n+1]
             U[n+1] = copy(G[n+1])
         end
     end

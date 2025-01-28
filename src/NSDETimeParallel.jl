@@ -39,7 +39,6 @@ export PararealSolution
 export PararealParameters
 export Tolerance, Weights
 
-export TimeParallelSolution
 export coarseguess, coarseguess!
 export ψ₁, ψ₂
 export Wnorm, collect!, numchunks, numiterates
