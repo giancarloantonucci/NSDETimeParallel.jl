@@ -18,19 +18,19 @@
     # ()
 end
 
-@recipe function f(solution::PararealSolution; showiterates=false)
-    if showiterates
-        @↓ iterates = solution
-        for (i, iterate) in enumerate(iterates)
-            @series begin
-                # colour := i
-                iterate
-            end
-        end
-    else
+@recipe function f(solution::PararealSolution)#; showiterates=false)
+    # if showiterates
+    #     @↓ iterates = solution
+    #     for (i, iterate) in enumerate(iterates)
+    #         @series begin
+    #             # colour := i
+    #             iterate
+    #         end
+    #     end
+    # else
         @↓ lastiterate = solution
         return lastiterate
-    end
+    # end
 end
 
 @recipe function f(wrapper::NSDEBase._PhasePlot{<:PararealIterate})

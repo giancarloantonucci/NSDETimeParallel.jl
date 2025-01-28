@@ -1,7 +1,6 @@
 "standard error function."
-function ψ₁(cache, solution, k, weights)
-    @↓ U_previous ← U = cache
-    @↓ U, T = solution.lastiterate
+function ψ₁(cache, k, weights)
+    @↓ U, T, U_previous ← U_ = cache
     if k > 1
         V = U_previous
     else
@@ -17,9 +16,8 @@ function ψ₁(cache, solution, k, weights)
 end
 
 "weighted error function."
-function ψ₂(cache, solution, k, weights)
-    @↓ U, T = solution.lastiterate
-    @↓ F = cache
+function ψ₂(cache, k, weights)
+    @↓ U, T, F = cache
     @↓ w = weights
     w = max(1.0, w)
     r = 0.0

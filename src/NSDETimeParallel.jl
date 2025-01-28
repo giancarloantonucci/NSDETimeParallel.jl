@@ -2,7 +2,7 @@ module NSDETimeParallel
 
 using Distributed
 using MPI
-using HDF5
+using Serialization
 
 using Reexport
 using ArrowMacros
@@ -20,7 +20,8 @@ include("parareal/cache.jl")
 include("parareal/iterate.jl")
 include("parareal/solution.jl")
 # include("parareal/coarseguess.jl")
-include("parareal/serial.jl")
+# include("parareal/utils.jl")
+# include("parareal/serial.jl")
 include("parareal/distributed.jl")
 include("parareal/mpi.jl")
 include("parareal/solve.jl")

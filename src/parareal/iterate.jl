@@ -24,55 +24,55 @@ PararealIterate(problem::AbstractInitialValueProblem, parareal::Parareal)
 returns the value of `iterate` at `t` via interpolation.
 """
 struct PararealIterate{
-            U_T<:AbstractVector{<:AbstractVector{<:Number}},
-            T_T<:AbstractVector{<:Real},
+            # U_T<:AbstractVector{<:AbstractVector{<:Number}},
+            # T_T<:AbstractVector{<:Real},
             chunks_T<:(AbstractVector{𝕊} where 𝕊<:AbstractInitialValueSolution),
         } <: AbstractTimeParallelIterate
-    U::U_T
-    T::T_T
+    # U::U_T
+    # T::T_T
     chunks::chunks_T
 end
 
 function PararealIterate(problem::AbstractInitialValueProblem, parareal::Parareal)
-    @↓ u0, t0 ← tspan[1] = problem
+    # @↓ u0, t0 ← tspan[1] = problem
     @↓ N = parareal.parameters
-    U = Vector{typeof(u0)}(undef, N)
-    U[1] = u0
-    T = Vector{typeof(t0)}(undef, N+1)
-    T[1] = t0
+    # U = Vector{typeof(u0)}(undef, N)
+    # U[1] = u0
+    # T = Vector{typeof(t0)}(undef, N+1)
+    # T[1] = t0
     chunks = Vector{AbstractInitialValueSolution}(undef, N)
-    return PararealIterate(U, T, chunks)
+    return PararealIterate(chunks)
 end
 
 #----------------------------------- METHODS -----------------------------------
 
-# function (iterate::PararealIterate)(tₚ::Real)
-#     N = length(iterate)
-#     if tₚ < iterate[1].t[1]
-#         return iterate[1](tₚ)
-#     end
-#     for n = 1:N
-#         if (n > 1 ? iterate[n-1].t[end] : iterate[n].t[1]) ≤ tₚ < iterate[n].t[end]
-#             return iterate[n](tₚ)
-#         end
-#     end
-#     if tₚ ≥ iterate[N].t[end]
-#         return iterate[N](tₚ)
-#     end
-# end
-# TODO: maybe add a flag iscollected to use one method or the other
 function (iterate::PararealIterate)(tₚ::Real)
-    @↓ U, T = iterate
-    idx = 0
-    for n = 1:length(T)-1
-        if T[n] ≤ tₚ ≤ T[n+1] # TODO: Maybe < T[n+1] to avoid unnecessary error? Check
-            idx = n
-            break
+    N = length(iterate)
+    if tₚ < iterate[1].t[1]
+        return iterate[1](tₚ)
+    end
+    for n = 1:N
+        if (n > 1 ? iterate[n-1].t[end] : iterate[n].t[1]) ≤ tₚ < iterate[n].t[end]
+            return iterate[n](tₚ)
         end
     end
-    uₚ = @fetchfrom workers()[idx] NSDETimeParallel.chunkfinesolution(tₚ)
-    return uₚ
+    if tₚ ≥ iterate[N].t[end]
+        return iterate[N](tₚ)
+    end
 end
+# TODO: maybe add a flag iscollected to use one method or the other
+# function (iterate::PararealIterate)(tₚ::Real)
+#     @↓ U, T = iterate
+#     idx = 0
+#     for n = 1:length(T)-1
+#         if T[n] ≤ tₚ ≤ T[n+1] # TODO: Maybe < T[n+1] to avoid unnecessary error? Check
+#             idx = n
+#             break
+#         end
+#     end
+#     uₚ = @fetchfrom workers()[idx] NSDETimeParallel.chunkfinesolution(tₚ)
+#     return uₚ
+# end
 
 #---------------------------------- FUNCTIONS ----------------------------------
 
@@ -118,7 +118,6 @@ returns the last index of `iterate`.
 """
 Base.lastindex(iterate::PararealIterate) = lastindex(iterate.chunks)
 
-# TODO: Change Wnorm to norm
 function Wnorm(iterate::PararealIterate, reference::AbstractInitialValueSolution, w::Number)
     N = length(iterate)
     Ts = [[iterate[n].t[begin] for n = 1:N]; iterate[N].t[end]]

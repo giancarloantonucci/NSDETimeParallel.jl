@@ -1,118 +1,110 @@
 "MPI implementation of Parareal."
-function parareal_mpi!(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
+function parareal_mpi!(
+    cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal;
+    directory::String="results", saveiterates::Bool=false)
     
-    # MPI set-up
-    comm = MPI.COMM_WORLD
-    rank = MPI.Comm_rank(comm)
-    size = MPI.Comm_size(comm)
-    root = 0
-    
-    @↓ skips, F, G = cache
-    @↓ errors, iterates = solution
-    @↓ U, T = solution.lastiterate
-    @↓ u0, (t0, tN) ← tspan = problem
-    @↓ finesolver, coarsesolver, saveiterates = parareal
+    # Extract components
+    @↓ skips, U, T, F, G = cache
+    @↓ errors = solution
+    @↓ finesolver, coarsesolver = parareal
     @↓ N, K = parareal.parameters
     @↓ weights, ψ, ϵ = parareal.tolerance
 
-    # Initialization
-    if rank == root
-        for n = 1:N+1
-            T[n] = (N - n + 1) / N * t0 + (n - 1) / N * tN # stable sum
-        end
-        F[1] = G[1] = U[1] = u0
+    # MPI set-up
+    comm = MPI.COMM_WORLD
+    rank = MPI.Comm_rank(comm)
+    root = 0
+
+    # Ensure directory exists (only rank 0 creates it)
+    if rank == root && !isdir(directory)
+        mkpath(directory)
     end
+    # Synchronize so all ranks see the directory
+    MPI.Barrier(comm)
 
-    # Broadcast initial values to all processes
-    T = MPI.bcast(T, root, comm)
-    U = MPI.bcast(U, root, comm)
-
-    # Coarse run (serial)
     if rank == root
+        # Initialization
+        F[1] = G[1] = U[1]
+
+        # Coarse run (serial)
         for n = 1:N-1
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
             chunkcoarsesolution = coarsesolver(chunkproblem)
             G[n+1] = chunkcoarsesolution(T[n+1])
             if !skips[n+1]
-                U[n+1] = G[n+1]
+                U[n+1] = copy(G[n+1])
             end
         end
     end
-    U = MPI.bcast(U, root, comm)
+
+    # Broadcast initial values to all processes
+    T = MPI.bcast(T, root, comm)
 
     # Main loop
     isconverged = false
-    for k in 1:K
+    chunkfinesolution = nothing # needed for savelastiterate
+    for k = 1:K
 
-        # Fine run (parallelised with MPI)
-        # function finesolve(worker_rank)
-        #     n = worker_rank
-        #     chunkproblem = copy(problem, U[n], T[n], T[n+1])
-        #     global chunkfinesolution # save full chunk solution locally for later retrieval
-        #     chunkfinesolution = finesolver(chunkproblem)
-        #     Uₚ = chunkfinesolution(T[n+1])
-        #     return Uₚ
+        # TODO: Don't need to bcast the whole of U
+        U = MPI.bcast(U, root, comm)
+        
+        # Save U and T at current iteration
+        # if rank == root && saveiterates
+        #     iterates[k].U .= U
+        #     iterates[k].T .= T
         # end
-        # fineresults = pmap(finesolve, WorkerPool(workers()[k:N]), k:N)
-        local_fine_results = Vector{Any}(undef, 0)
-        for n = k:N - 1
-            if (n % size == rank)
-                chunkproblem = copy(problem, U[n], T[n], T[n+1])
-                global chunkfinesolution # save full chunk solution locally for later retrieval
-                chunkfinesolution = finesolver(chunkproblem)
-                Uₚ = chunkfinesolution(T[n+1])
-                push!(local_fine_results, (n, Uₚ))
+
+        # Fine run (parallelised with MPI): Rank 0 receives fine results from ranks k..N-1
+        n = rank
+        if k ≤ n ≤ N
+            chunkproblem = copy(problem, U[n], T[n], T[n+1])
+            chunkfinesolution = finesolver(chunkproblem)
+            if n < N
+                U_n_plus_1 = chunkfinesolution(T[n+1])
+                MPI.send(U_n_plus_1, comm, dest=root, tag=n)
             end
-        end
-
-        # for n = k:N-1
-        #     F[n+1] = fineresults[n-k+1]
-        # end
-        # Gather results at rank 0
-        all_fine_results = MPI.gather(local_fine_results, comm, root=root)
-        if rank == root
-            for results in all_fine_results
-                for (n, Uₚ) in results
-                    F[n+1] = Uₚ
+            # Save chunks at current iteration
+            if saveiterates
+                filename = joinpath(directory, "iter_$(k)_chunk_$(n).jls")
+                open(filename, "w") do file
+                    local_data = (chunk_n = chunkfinesolution,)
+                    serialize(file, local_data)
                 end
             end
         end
-
-        # Save iterates
-        if saveiterates && rank == root
-            iterates[k].U .= U
-            iterates[k].T .= T
-            for n = 1:k-1
-                iterates[k][n] = iterates[k-1][n]
-            end
-            for n = k:N
-                iterates[k][n] = @fetchfrom workers()[n] NSDETimeParallel.chunkfinesolution
+        if rank == root
+            for n = k:N-1
+                F[n+1] = MPI.recv(comm, source=n, tag=n)
             end
         end
 
-        # Update weights of error function
         if rank == root
+            # Update weights of error function
             update!(weights, U, F)
-        end
 
-        # Check convergence
-        if rank == root
-            errors[k] = ψ(cache, solution, k, weights)
+            # Check convergence
+            errors[k] = ψ(cache, k, weights)
             if errors[k] ≤ ϵ
                 resize!(errors, k) # self-updates inside solution
-                if saveiterates
-                    resize!(iterates, k) # self-updates inside solution
-                end
                 isconverged = true
             end
         end
+
         isconverged = MPI.bcast(isconverged, root, comm)
         if isconverged
+            if rank != root
+                n = rank
+                filename = joinpath(directory, "lastiter_chunk_$(n).jls")
+                open(filename, "w") do file
+                    local_data = (chunk_n = chunkfinesolution,)
+                    serialize(file, local_data)
+                end
+            end
             break
         end
 
-        # Correction step (serial)
         if rank == root
+            # Correction step (serial)
             for n = k:N-1
                 chunkproblem = copy(problem, U[n], T[n], T[n+1])
                 chunkcoarsesolution = coarsesolver(chunkproblem)
@@ -121,7 +113,12 @@ function parareal_mpi!(cache::PararealCache, solution::PararealSolution, problem
                 G[n+1] = v
             end
         end
-        U = MPI.bcast(U, root, comm)
+    end
+
+    MPI.Barrier(comm)
+    
+    if rank == root
+        collect!(solution; directory)
     end
 
     return solution

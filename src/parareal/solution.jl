@@ -5,14 +5,13 @@ A composite type for an [`AbstractTimeParallelSolution`](@ref) obtained using [`
 
 # Constructors
 ```julia
-PararealSolution(errors, lastiterate, iterates)
+PararealSolution(lastiterate, errors)
 PararealSolution(problem::AbstractInitialValueProblem, parareal::Parareal)
 ```
 
 ## Arguments
-- `errors :: AbstractVector{ℝ} where ℝ<:Real` : iteration errors.
 - `lastiterate :: PararealIterate`
-- `iterates :: AbstractVector{𝕊} where 𝕊<:PararealIterate`
+- `errors :: AbstractVector{ℝ} where ℝ<:Real` : iteration errors.
 
 # Functions
 - [`firstindex`](@ref) : first index.
@@ -29,23 +28,22 @@ PararealSolution(problem::AbstractInitialValueProblem, parareal::Parareal)
 returns the value of `solution` at `t` via interpolation.
 """
 mutable struct PararealSolution{
-            errors_T<:(AbstractVector{ℝ} where ℝ<:Real),
             lastiterate_T<:PararealIterate,
-            iterates_T<:Union{AbstractVector{𝕊} where 𝕊<:PararealIterate, Nothing},
+            errors_T<:(AbstractVector{ℝ} where ℝ<:Real),
+            # iterates_T<:Union{AbstractVector{𝕊} where 𝕊<:PararealIterate, Nothing},
         } <: AbstractTimeParallelSolution
-    errors::errors_T
     lastiterate::lastiterate_T
-    iterates::iterates_T
+    errors::errors_T
+    # iterates::iterates_T
 end
 
 function PararealSolution(problem::AbstractInitialValueProblem, parareal::Parareal)
-    @↓ saveiterates = parareal
+    lastiterate = PararealIterate(problem, parareal)
     @↓ K = parareal.parameters
     @↓ ϵ_T ← typeof(ϵ) = parareal.tolerance
     errors = Vector{ϵ_T}(undef, K)
-    lastiterate = PararealIterate(problem, parareal)
-    iterates = saveiterates ? [PararealIterate(problem, parareal) for i in 1:K] : nothing
-    return PararealSolution(errors, lastiterate, iterates)
+    # iterates = saveiterates ? [PararealIterate(problem, parareal) for i in 1:K] : nothing
+    return PararealSolution(lastiterate, errors)
 end
 
 # ---------------------------------- METHODS ----------------------------------
@@ -110,20 +108,54 @@ returns a [`PararealSolution`](@ref) constructor for the solution of `problem` w
 """
 TimeParallelSolution(problem::AbstractInitialValueProblem, parareal::Parareal) = PararealSolution(problem, parareal)
 
-# TODO: Change Wnorm to norm
-function Wnorm(solution::PararealSolution, reference::AbstractInitialValueSolution, w::Number)
-    K = length(solution.errors)
-    if solution.iterates isa Nothing
-        return error("`Wnorm`: `(solution::PararealSolution).iterates` contains `nothing`. Solve with `saveiterates = true`.")
-    else
-        return [Wnorm(solution.iterates[k], reference, w) for k = 1:K]
-    end
-end
+# function Wnorm(solution::PararealSolution, reference::AbstractInitialValueSolution, w::Number)
+#     K = length(solution.errors)
+#     if solution.iterates isa Nothing
+#         return error("`Wnorm`: `(solution::PararealSolution).iterates` contains `nothing`. Solve with `saveiterates = true`.")
+#     else
+#         return [Wnorm(solution.iterates[k], reference, w) for k = 1:K]
+#     end
+# end
 
-function collect!(solution::PararealSolution)
-    N = length(solution.lastiterate)
-    for n = 1:N
-        solution[n] = @fetchfrom workers()[n] NSDETimeParallel.chunkfinesolution
+# function collect!(solution::PararealSolution)
+#     N = length(solution.lastiterate)
+#     for n = 1:N
+#         solution[n] = @fetchfrom workers()[n] NSDETimeParallel.chunkfinesolution
+#     end
+#     return solution
+# end
+
+function collect!(solution::PararealSolution; directory::String="results")
+    for n = 1:numchunks(solution)
+        filename = joinpath(directory, "lastiter_chunk_$(n).jls")
+        if isfile(filename)
+            open(filename, "r") do file
+                local_data = deserialize(file)
+                if local_data.chunk_n !== nothing
+                    solution.lastiterate[n] = local_data.chunk_n
+                end
+            end
+        end
     end
     return solution
 end
+
+# function collect_iterates!(solution::PararealSolution; dir::String="results")
+#     for k = 1:numiterates(solution)
+#         for n = 1:k-1
+#             solution.iterates[k][n] = solution.iterates[k-1][n]
+#         end
+#         for n = k:numchunks(solution)
+#             filename = joinpath(dir, "iter_$(k)_chunk_$(n).jls")
+#             if isfile(filename)
+#                 open(filename, "r") do file
+#                     local_data = deserialize(file)
+#                     if local_data.chunk_n !== nothing
+#                         solution.iterates[k][n] = local_data.chunk_n
+#                     end
+#                 end
+#             end
+#         end
+#     end
+#     return solution
+# end
