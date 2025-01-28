@@ -2,6 +2,7 @@ module NSDETimeParallel
 
 using Distributed
 using MPI
+using HDF5
 
 using Reexport
 using ArrowMacros
