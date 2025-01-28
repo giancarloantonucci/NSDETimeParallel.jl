@@ -3,40 +3,41 @@ function parareal_serial!(cache::PararealCache, solution::PararealSolution, prob
     @↓ skips, F, G = cache
     @↓ errors, iterates = solution
     @↓ U, T = solution.lastiterate
+    @↓ u0, (t0, tN) ← tspan = problem
     @↓ finesolver, coarsesolver, saveiterates = parareal
     @↓ N, K = parareal.parameters
     @↓ weights, ψ, ϵ = parareal.tolerance
 
-    U_ = copy(U) # used by standard conv check
+    # Initialization
+    for n = 1:N+1
+        T[n] = (N - n + 1) / N * t0 + (n - 1) / N * tN # stable sum
+    end
+    F[1] = G[1] = U[1] = u0
 
-    # coarse run (serial)
-    for n = 1:N
-        if skips[n] # `skips[1] == true` always
-            G[n] = U[n]
-        else
-            chunkproblem = copy(problem, U[n-1], T[n-1], T[n])
-            chunkcoarsesolution = coarsesolver(chunkproblem)
-            G[n] = chunkcoarsesolution(T[n])
+    # Coarse run (serial)
+    for n = 1:N-1
+        chunkproblem = copy(problem, U[n], T[n], T[n+1])
+        chunkcoarsesolution = coarsesolver(chunkproblem)
+        G[n+1] = chunkcoarsesolution(T[n+1])
+        if !skips[n+1]
+            U[n+1] = G[n+1]
         end
     end
 
-    # initialization
-    F[1] = U[1]
-
-    # main loop
+    # Main loop
     for k in 1:K
 
-        # fine run (parallelisable)
+        # Fine run (parallelisable)
         for n = k:N
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
-            chunksolution = finesolver(chunkproblem)
-            solution[n] = chunksolution
+            chunkfinesolution = finesolver(chunkproblem)
+            solution[n] = chunkfinesolution
             if n < N
-                F[n+1] = chunksolution(T[n+1])
+                F[n+1] = chunkfinesolution(T[n+1])
             end
         end
 
-        # save iterates
+        # Save iterates
         if saveiterates
             iterates[k].U .= U
             iterates[k].T .= T
@@ -48,24 +49,24 @@ function parareal_serial!(cache::PararealCache, solution::PararealSolution, prob
             end
         end
 
-        # check convergence
+        # Update weights of error function
         update!(weights, U, F)
-        errors[k] = ψ(cache, solution, k, weights, U_)
+
+        # Check convergence
+        errors[k] = ψ(cache, solution, k, weights)
         if errors[k] ≤ ϵ
-            resize!(errors, k) # self-updates in solution
+            resize!(errors, k) # self-updates inside solution
             if saveiterates
-                resize!(iterates, k) # self-updates in solution
+                resize!(iterates, k) # self-updates inside solution
             end
             break
         end
 
-        U_ .= U
-
         # correction step (serial)
         for n = k:N-1
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
-            chunksolution = coarsesolver(chunkproblem)
-            v = chunksolution(T[n+1])
+            chunkfinesolution = coarsesolver(chunkproblem)
+            v = chunkfinesolution(T[n+1])
             U[n+1] = v + F[n+1] - G[n+1]
             G[n+1] = v
         end

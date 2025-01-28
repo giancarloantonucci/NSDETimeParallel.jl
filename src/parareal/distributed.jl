@@ -3,35 +3,36 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
     @↓ skips, F, G = cache
     @↓ errors, iterates = solution
     @↓ U, T = solution.lastiterate
+    @↓ u0, (t0, tN) ← tspan = problem
     @↓ finesolver, coarsesolver, saveiterates = parareal
     @↓ N, K = parareal.parameters
     @↓ weights, ψ, ϵ = parareal.tolerance
 
-    U_ = copy(U) # used by standard conv check
+    # Initialization
+    for n = 1:N+1
+        T[n] = (N - n + 1) / N * t0 + (n - 1) / N * tN # stable sum
+    end
+    F[1] = G[1] = U[1] = u0
 
-    # coarse run (serial)
-    for n = 1:N
-        if skips[n] # `skips[1] == true` always
-            G[n] = U[n]
-        else
-            chunkproblem = copy(problem, U[n-1], T[n-1], T[n])
-            chunkcoarsesolution = coarsesolver(chunkproblem)
-            G[n] = chunkcoarsesolution(T[n])
+    # Coarse run (serial)
+    for n = 1:N-1
+        chunkproblem = copy(problem, U[n], T[n], T[n+1])
+        chunkcoarsesolution = coarsesolver(chunkproblem)
+        G[n+1] = chunkcoarsesolution(T[n+1])
+        if !skips[n+1]
+            U[n+1] = G[n+1]
         end
     end
 
-    # initialization
-    F[1] = U[1]
-
-    # main loop
+    # Main loop
     for k in 1:K
 
-        # fine run (parallelised with pmap)
-        # docs: @distributed for many simple operations / pmap for few complex operations
+        # Fine run (parallelised with pmap)
+        # docs: @distributed for many simple operations / pmap for a few complex operations
         function finesolve(worker_rank)
             n = worker_rank
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
-            global chunkfinesolution # save full chunk solution for later retrieval
+            global chunkfinesolution # save full chunk solution locally for later retrieval
             chunkfinesolution = finesolver(chunkproblem)
             Uₚ = chunkfinesolution(T[n+1])
             return Uₚ
@@ -42,7 +43,7 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
             F[n+1] = fineresults[n-k+1]
         end
 
-        # save iterates
+        # Save iterates
         if saveiterates
             iterates[k].U .= U
             iterates[k].T .= T
@@ -54,21 +55,20 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
             end
         end
 
-        # check convergence
+        # Update weights of error function
         update!(weights, U, F)
-        errors[k] = ψ(cache, solution, k, weights, U_)
-        if errors[k] ≤ ϵ
-            resize!(errors, k) # self-updates in solution
-            if saveiterates
-                resize!(iterates, k) # self-updates in solution
-            end
 
+        # Check convergence
+        errors[k] = ψ(cache, solution, k, weights)
+        if errors[k] ≤ ϵ
+            resize!(errors, k) # self-updates inside solution
+            if saveiterates
+                resize!(iterates, k) # self-updates inside solution
+            end
             break
         end
 
-        U_ .= U
-
-        # correction step (serial)
+        # Correction step (serial)
         for n = k:N-1
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
             chunkcoarsesolution = coarsesolver(chunkproblem)

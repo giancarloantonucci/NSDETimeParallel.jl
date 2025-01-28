@@ -1,8 +1,9 @@
 "standard error function."
-function ψ₁(cache, solution, k, weights, U_, args...)
+function ψ₁(cache, solution, k, weights)
+    @↓ U_previous ← U = cache
     @↓ U, T = solution.lastiterate
     if k > 1
-        V = U_
+        V = U_previous
     else
         @↓ V ← F = cache
     end
@@ -11,11 +12,12 @@ function ψ₁(cache, solution, k, weights, U_, args...)
     for n = 1:N
         r += norm(U[n] - V[n]) / norm(U[n])
     end
+    U_previous .= U
     return r / N
 end
 
 "weighted error function."
-function ψ₂(cache, solution, k, weights, args...)
+function ψ₂(cache, solution, k, weights)
     @↓ U, T = solution.lastiterate
     @↓ F = cache
     @↓ w = weights

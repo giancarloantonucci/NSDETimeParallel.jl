@@ -1,6 +1,7 @@
 module NSDETimeParallel
 
 using Distributed
+using MPI
 
 using Reexport
 using ArrowMacros
@@ -9,7 +10,7 @@ using LinearAlgebra
 using RecipesBase
 
 include("abstract.jl")
-include("utils.jl")
+# include("utils.jl")
 include("weights.jl")
 include("tolerance.jl")
 include("parareal/parameters.jl")
@@ -17,9 +18,10 @@ include("parareal/constructor.jl")
 include("parareal/cache.jl")
 include("parareal/iterate.jl")
 include("parareal/solution.jl")
-include("parareal/coarseguess.jl")
+# include("parareal/coarseguess.jl")
 include("parareal/serial.jl")
 include("parareal/distributed.jl")
+include("parareal/mpi.jl")
 include("parareal/solve.jl")
 include("solve.jl")
 include("plots_recipes.jl")

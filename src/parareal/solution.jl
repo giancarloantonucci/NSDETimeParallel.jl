@@ -28,7 +28,11 @@ PararealSolution(problem::AbstractInitialValueProblem, parareal::Parareal)
 
 returns the value of `solution` at `t` via interpolation.
 """
-mutable struct PararealSolution{errors_T<:(AbstractVector{ℝ} where ℝ<:Real), lastiterate_T<:PararealIterate, iterates_T<:Union{AbstractVector{𝕊} where 𝕊<:PararealIterate, Nothing}} <: AbstractTimeParallelSolution
+mutable struct PararealSolution{
+            errors_T<:(AbstractVector{ℝ} where ℝ<:Real),
+            lastiterate_T<:PararealIterate,
+            iterates_T<:Union{AbstractVector{𝕊} where 𝕊<:PararealIterate, Nothing},
+        } <: AbstractTimeParallelSolution
     errors::errors_T
     lastiterate::lastiterate_T
     iterates::iterates_T
@@ -44,11 +48,11 @@ function PararealSolution(problem::AbstractInitialValueProblem, parareal::Parare
     return PararealSolution(errors, lastiterate, iterates)
 end
 
-#----------------------------------- METHODS -----------------------------------
+# ---------------------------------- METHODS ----------------------------------
 
 (solution::PararealSolution)(tₚ::Real) = solution.lastiterate(tₚ)
 
-#---------------------------------- FUNCTIONS ----------------------------------
+# --------------------------------- FUNCTIONS ---------------------------------
 
 """
     length(solution::PararealSolution)
@@ -106,6 +110,7 @@ returns a [`PararealSolution`](@ref) constructor for the solution of `problem` w
 """
 TimeParallelSolution(problem::AbstractInitialValueProblem, parareal::Parareal) = PararealSolution(problem, parareal)
 
+# TODO: Change Wnorm to norm
 function Wnorm(solution::PararealSolution, reference::AbstractInitialValueSolution, w::Number)
     K = length(solution.errors)
     if solution.iterates isa Nothing

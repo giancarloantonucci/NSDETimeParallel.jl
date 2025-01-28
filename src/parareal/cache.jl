@@ -1,7 +1,13 @@
-struct PararealCache{skips_T<:AbstractVector{<:Bool}, F_T<:AbstractVector{<:AbstractVector{<:Number}}, G_T<:AbstractVector{<:AbstractVector{<:Number}}} <: AbstractTimeParallelCache
+struct PararealCache{
+            skips_T<:AbstractVector{<:Bool},
+            F_T<:AbstractVector{<:AbstractVector{<:Number}},
+            G_T<:AbstractVector{<:AbstractVector{<:Number}},
+            U_T<:AbstractVector{<:AbstractVector{<:Number}},
+        } <: AbstractTimeParallelCache
     skips::skips_T
     F::F_T
     G::G_T
+    U_::U_T
 end
 
 function PararealCache(problem::AbstractInitialValueProblem, parareal::Parareal)
@@ -11,8 +17,8 @@ function PararealCache(problem::AbstractInitialValueProblem, parareal::Parareal)
     @↓ u0, t0 ← tspan[1] = problem
     F = Vector{typeof(u0)}(undef, N)
     G = similar(F)
-    F[1] = G[1] = u0
-    return PararealCache(skips, F, G)
+    U_ = similar(F)
+    return PararealCache(skips, F, G, U_)
 end
 
 #---------------------------------- FUNCTIONS ----------------------------------

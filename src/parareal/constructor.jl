@@ -25,13 +25,13 @@ Parareal(finesolver, coarsesolver; tolerance=Tolerance(), parameters=PararealPar
 returns the `solution` of a `problem` using `parareal`. `executionmode` selects the implementation, `saveiterates` flags whether to save all iterates in `solution.iterates`.
 """
 struct Parareal{
-    finesolver_T<:AbstractInitialValueSolver,
-    coarsolver_T<:AbstractInitialValueSolver,
-    parameters_T<:AbstractPararealParameters,
-    tolerance_T<:AbstractTolerance,
-    executionmode_T<:String,
-    saveiterates_T<:Bool,
-} <: AbstractTimeParallelSolver
+            finesolver_T<:AbstractInitialValueSolver,
+            coarsolver_T<:AbstractInitialValueSolver,
+            parameters_T<:AbstractPararealParameters,
+            tolerance_T<:AbstractTolerance,
+            executionmode_T<:String,
+            saveiterates_T<:Bool,
+        } <: AbstractTimeParallelSolver
     finesolver::finesolver_T
     coarsesolver::coarsolver_T
     parameters::parameters_T
@@ -46,5 +46,6 @@ Parareal(
     parameters::AbstractPararealParameters=PararealParameters(),
     tolerance::AbstractTolerance=Tolerance(),
     executionmode::String="SERIAL",
-    saveiterates::Bool=false,
+    saveiterates::Bool=false
 ) = Parareal(finesolver, coarsesolver, parameters, tolerance, executionmode, saveiterates)
+# ) = Parareal(finesolver, coarsesolver, parameters, tolerance, saveiterates)

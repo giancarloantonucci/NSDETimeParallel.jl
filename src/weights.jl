@@ -10,10 +10,10 @@ Weights(; w=1.0, updatew=false)
 
 ## Arguments
 - `w :: Union{AbstractVector{ℝ}, ℝ} where ℝ<:Real` : weighting factor for ψ.
-- `updatew :: Bool` : flags when to [`update!`](@ref) `w` using local information.
+- `updatew :: Bool` : flags when to [`update!`](@ref) `w` using (an approximation of) the Lipschitz function of the fine solver.
 
 # Functions
-- [`update!`](@ref) : updates `w`.
+- [`update!`](@ref) : updates `w` using (an approximation of) the Lipschitz function of the fine solver.
 """
 mutable struct Weights{w_T<:(Union{AbstractVector{ℝ}, ℝ} where ℝ<:Real), updatew_T<:Bool} <: AbstractWeights
     w::w_T
@@ -31,12 +31,15 @@ updates `weights.w` based on `U` and `F`.
 """
 function update!(weights::Weights, U::AbstractVector{𝕍}, F::AbstractVector{𝕍}) where 𝕍<:AbstractVector{ℂ} where ℂ<:Number
     @↓ w, updatew = weights
+    # TODO: Add `a` in Weights for Adaptive MoWi
+    # @↓ w, updatew, a = weights
+    a = 1
     N = length(U)
     w₁ = 0.0
     w₂ = 0.0
     if updatew
         for i = 2:N-1
-            r = norm(F[i+1] - F[i]) / norm(U[i] - U[i-1])
+            r = a * norm(F[i+1] - F[i]) / norm(U[i] - U[i-1])
             w₁ += r
             w₂ = max(w₂, r)
         end
