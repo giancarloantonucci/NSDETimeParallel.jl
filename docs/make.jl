@@ -1,16 +1,28 @@
 using Documenter
-using TimeParallel
+using DocumenterInterLinks
+using NSDEBase, NSDETimeParallel
 
-PAGES = ["Home" => "index.md"]
+PAGES = [
+    "Home" => "index.md",
+    "Examples" => "examples.md",
+]
+
+links = InterLinks(
+    "NSDEBase" => (
+        "https://giancarloantonucci.github.io/NSDEBase.jl/dev/",
+        "https://giancarloantonucci.github.io/NSDEBase.jl/dev/objects.inv"
+    )
+)
 
 makedocs(;
-    sitename = "TimeParallel.jl",
+    sitename = "NSDETimeParallel.jl",
     format = Documenter.HTML(),
-    modules = [TimeParallel],
+    modules = [NSDETimeParallel],
     pages = PAGES,
-    authors = "Giancarlo A. Antonucci <giancarlo.antonucci@icloud.com>"
+    authors = "Giancarlo A. Antonucci <giancarlo.antonucci@icloud.com>",
+    plugins = [links],
 )
 
 deploydocs(;
-    repo = "https://github.com/giancarloantonucci/TimeParallel.jl"
+    repo = "https://github.com/giancarloantonucci/NSDETimeParallel.jl"
 )

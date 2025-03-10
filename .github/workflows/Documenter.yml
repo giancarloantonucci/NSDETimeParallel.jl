@@ -10,20 +10,26 @@ jobs:
     name: Documenter
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@v1
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v1
         with:
           version: '1'
           show-versioninfo: true
+      
       - name: Install dependencies
         run: |
           julia --project=docs -e '
             using Pkg
+            Pkg.rm("NSDEBase")
+            Pkg.develop(PackageSpec(url="https://github.com/giancarloantonucci/NSDEBase.jl"))
             Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.instantiate()
-            Pkg.build()
-            Pkg.precompile()'
-      - name: Build and deploy
+            Pkg.resolve()
+            Pkg.instantiate()'
+      
+      - name: Build and deploy documentation
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
