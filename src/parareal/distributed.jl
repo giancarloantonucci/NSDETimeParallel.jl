@@ -1,8 +1,8 @@
 "Distributed implementation of Parareal."
-function parareal_distributed!(
-    cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal;
+function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
+    problem::AbstractInitialValueProblem, parareal::Parareal;
     directory::String="results", saveiterates::Bool=false)
-
+    
     # Extract components
     @↓ finesolver, coarsesolver = parareal
     @↓ N, K = parareal.parameters
@@ -17,7 +17,7 @@ function parareal_distributed!(
 
     # Initialization
     F[1] = G[1] = U[1]
-        
+    
     # Coarse run (serial)
     for n = 1:N-1
         chunkproblem = copy(problem, U[n], T[n], T[n+1])
@@ -30,7 +30,6 @@ function parareal_distributed!(
 
     # Main loop
     for k = 1:K
-
         # Fine run (parallelised with pmap)
         # docs: @distributed for many simple operations / pmap for a few complex operations
         function finesolve(worker_rank)
@@ -61,15 +60,6 @@ function parareal_distributed!(
         errors[k] = ψ(cache, k, weights)
         if errors[k] ≤ ϵ
             resize!(errors, k) # self-updates inside solution
-            function saveresults(worker_rank)
-                n = worker_rank
-                filename = joinpath(directory, "lastiter_chunk_$(n).jls")
-                open(filename, "w") do file
-                    local_data = (chunk_n = chunkfinesolution,)
-                    serialize(file, local_data)
-                end
-            end
-            pmap(saveresults, WorkerPool(workers()[1:N]), 1:N)
             break
         end
 
@@ -81,9 +71,20 @@ function parareal_distributed!(
             U[n+1] = v + F[n+1] - G[n+1]
             G[n+1] = v
         end
-
     end
 
+    # Save chunk-solutions from workers
+    function saveresults(worker_rank)
+        n = worker_rank
+        filename = joinpath(directory, "lastiter_chunk_$(n).jls")
+        open(filename, "w") do file
+            local_data = (chunk_n = chunkfinesolution,)
+            serialize(file, local_data)
+        end
+    end
+    pmap(saveresults, WorkerPool(workers()[1:N]), 1:N)
+
+    # Collect chunk-solutions into solution.lastiterate
     collect!(solution; directory)
 
     return solution
