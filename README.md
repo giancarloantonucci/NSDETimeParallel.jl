@@ -6,10 +6,16 @@ A Julia package implementing time-parallel methods.
 
 ## Installation
 
-This package is a [registered package](https://juliahub.com/ui/Search?q=NSDETimeParallel&type=packages) compatible with Julia v1.6 and above. From the Julia REPL,
+<!-- This package is a [registered package](https://juliahub.com/ui/Search?q=NSDETimeParallel&type=packages) compatible with Julia v1.10 and above. From the Julia REPL,
 
 ```
 ]add NSDETimeParallel
+``` -->
+
+This package is compatible with Julia v1.10 and above. From the Julia REPL,
+
+```
+]add https://github.com/giancarloantonucci/NSDETimeParallel.jl
 ```
 
 Read the [documentation](https://giancarloantonucci.github.io/NSDETimeParallel.jl/dev) for a complete overview of this package.
