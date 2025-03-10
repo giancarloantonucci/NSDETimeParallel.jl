@@ -31,7 +31,7 @@ function parareal_mpi!(
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
             chunkcoarsesolution = coarsesolver(chunkproblem)
             G[n+1] = chunkcoarsesolution(T[n+1])
-            if !makeGs[n+1]
+            if makeGs[n+1]
                 U[n+1] = copy(G[n+1])
             end
         end
@@ -47,12 +47,6 @@ function parareal_mpi!(
 
         # TODO: Don't need to bcast the whole of U
         U = MPI.bcast(U, root, comm)
-        
-        # Save U and T at current iteration
-        # if rank == root && saveiterates
-        #     iterates[k].U .= U
-        #     iterates[k].T .= T
-        # end
 
         # Fine run (parallelised with MPI): Rank 0 receives fine results from ranks k..N-1
         n = rank
@@ -92,14 +86,6 @@ function parareal_mpi!(
 
         isconverged = MPI.bcast(isconverged, root, comm)
         if isconverged
-            if rank != root
-                n = rank
-                filename = joinpath(directory, "lastiter_chunk_$(n).jls")
-                open(filename, "w") do file
-                    local_data = (chunk_n = chunkfinesolution,)
-                    serialize(file, local_data)
-                end
-            end
             break
         end
 
@@ -115,8 +101,20 @@ function parareal_mpi!(
         end
     end
 
+    # Save chunk-solutions from workers
+    if rank != root
+        n = rank
+        filename = joinpath(directory, "lastiter_chunk_$(n).jls")
+        open(filename, "w") do file
+            local_data = (chunk_n = chunkfinesolution,)
+            serialize(file, local_data)
+        end
+    end
+
+    # Wait for all workers to finish writing
     MPI.Barrier(comm)
     
+    # Collect chunk-solutions into solution.lastiterate
     if rank == root
         collect!(solution; directory)
     end
