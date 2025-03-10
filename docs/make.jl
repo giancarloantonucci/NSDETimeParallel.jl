@@ -4,7 +4,7 @@ using NSDEBase, NSDETimeParallel
 
 PAGES = [
     "Home" => "index.md",
-    "Examples" => "examples.md",
+    "Examples" => "speedup.md",
 ]
 
 links = InterLinks(
