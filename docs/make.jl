@@ -2,10 +2,7 @@ using Documenter
 using DocumenterInterLinks
 using NSDEBase, NSDETimeParallel
 
-PAGES = [
-    "Home" => "index.md",
-    "Examples" => "speedup.md",
-]
+PAGES = ["Home" => "index.md"]
 
 links = InterLinks(
     "NSDEBase" => (
