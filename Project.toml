@@ -15,11 +15,11 @@ Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
 [compat]
 ArrowMacros = "0.1, 0.2"
-MPI = "0.20.22"
-NSDEBase = "0.2"
+MPI = "0.20"
+NSDEBase = "0.3"
 RecipesBase = "0.7.0, 0.8, 1.0"
 Reexport = "0.2, 1.0"
-Serialization = "1.11.0"
+Serialization = "1.10, 1.11"
 julia = "1"
 
 [extras]
