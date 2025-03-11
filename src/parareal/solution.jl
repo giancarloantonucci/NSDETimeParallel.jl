@@ -29,21 +29,21 @@ returns the value of `solution` at `t` via interpolation.
 """
 mutable struct PararealSolution{
             lastiterate_T<:PararealIterate,
-            errors_T<:(AbstractVector{ℝ} where ℝ<:Real),
-            # iterates_T<:Union{AbstractVector{𝕊} where 𝕊<:PararealIterate, Nothing},
+            errors_T<:AbstractVector{<:Real},
+            iterates_T<:Union{AbstractVector{<:PararealIterate}, Nothing},
         } <: AbstractTimeParallelSolution
     lastiterate::lastiterate_T
     errors::errors_T
-    # iterates::iterates_T
+    iterates::iterates_T
 end
 
-function PararealSolution(problem::AbstractInitialValueProblem, parareal::Parareal)
+function PararealSolution(problem::AbstractInitialValueProblem, parareal::Parareal; saveiterates::Bool=false)
     lastiterate = PararealIterate(problem, parareal)
     @↓ K = parareal.parameters
     @↓ ϵ_T ← typeof(ϵ) = parareal.tolerance
     errors = Vector{ϵ_T}(undef, K)
-    # iterates = saveiterates ? [PararealIterate(problem, parareal) for i in 1:K] : nothing
-    return PararealSolution(lastiterate, errors)
+    iterates = saveiterates ? [PararealIterate(problem, parareal) for i in 1:K] : nothing
+    return PararealSolution(lastiterate, errors, iterates)
 end
 
 # ---------------------------------- METHODS ----------------------------------
@@ -138,6 +138,24 @@ function collect!(solution::PararealSolution; directory::String="results")
         end
     end
     return solution
+end
+
+function collect_iterates(iterates::AbstractVector{<:PararealIterate}; directory::String="results")
+    @↓ iterates = solution
+    for k = 1:numiterates(solution)
+        for n = 1:numchunks(solution)
+            filename = joinpath(directory, "iter_$(k)_chunk_$(n).jls")
+            if isfile(filename)
+                open(filename, "r") do file
+                    local_data = deserialize(file)
+                    if local_data.chunk_n !== nothing
+                        iterates[k][n] = local_data.chunk_n
+                    end
+                end
+            end
+        end
+    end
+    return iterates
 end
 
 # function collect_iterates!(solution::PararealSolution; dir::String="results")

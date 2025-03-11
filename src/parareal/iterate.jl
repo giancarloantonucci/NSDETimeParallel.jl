@@ -33,13 +33,19 @@ struct PararealIterate{
     chunks::chunks_T
 end
 
+# function PararealIterate(problem::AbstractInitialValueProblem, parareal::Parareal)
+#     # @↓ u0, t0 ← tspan[1] = problem
+#     @↓ N = parareal.parameters
+#     # U = Vector{typeof(u0)}(undef, N)
+#     # U[1] = u0
+#     # T = Vector{typeof(t0)}(undef, N+1)
+#     # T[1] = t0
+#     chunks = Vector{AbstractInitialValueSolution}(undef, N)
+#     return PararealIterate(chunks)
+# end
+
 function PararealIterate(problem::AbstractInitialValueProblem, parareal::Parareal)
-    # @↓ u0, t0 ← tspan[1] = problem
     @↓ N = parareal.parameters
-    # U = Vector{typeof(u0)}(undef, N)
-    # U[1] = u0
-    # T = Vector{typeof(t0)}(undef, N+1)
-    # T[1] = t0
     chunks = Vector{AbstractInitialValueSolution}(undef, N)
     return PararealIterate(chunks)
 end
