@@ -1,7 +1,8 @@
 "Distributed implementation of Parareal."
-function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
+function parareal_distributed!(
+    cache::PararealCache, solution::PararealSolution,
     problem::AbstractInitialValueProblem, parareal::Parareal;
-    directory::String="results", saveiterates::Bool=false)
+    directory::String, saveiterates::Bool, nocollect::Bool)
     
     # Extract components
     @↓ finesolver, coarsesolver = parareal
@@ -85,7 +86,9 @@ function parareal_distributed!(cache::PararealCache, solution::PararealSolution,
     pmap(saveresults, WorkerPool(workers()[1:N]), 1:N)
 
     # Collect chunk-solutions into solution.lastiterate
-    collect!(solution; directory)
+    if !nocollect
+        collect!(solution; directory)
+    end
 
     return solution
 end

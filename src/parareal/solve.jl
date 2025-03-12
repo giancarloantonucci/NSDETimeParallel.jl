@@ -1,9 +1,9 @@
 function (parareal::Parareal)(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem;
-    directory::String="results", mode::String="DISTRIBUTED", saveiterates::Bool=false)
+    directory::String="results", mode::String="DISTRIBUTED", saveiterates::Bool=false, nocollect::Bool=false)
     if mode == "DISTRIBUTED"
-        parareal_distributed!(cache, solution, problem, parareal; directory, saveiterates)
+        parareal_distributed!(cache, solution, problem, parareal; directory, saveiterates, nocollect)
     elseif mode == "MPI"
-        parareal_mpi!(cache, solution, problem, parareal; directory, saveiterates)
+        parareal_mpi!(cache, solution, problem, parareal; directory, saveiterates, nocollect)
     end
     return solution
 end

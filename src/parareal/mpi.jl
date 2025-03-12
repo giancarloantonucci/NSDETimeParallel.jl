@@ -1,7 +1,8 @@
 "MPI implementation of Parareal."
 function parareal_mpi!(
-    cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal;
-    directory::String="results", saveiterates::Bool=false)
+    cache::PararealCache, solution::PararealSolution,
+    problem::AbstractInitialValueProblem, parareal::Parareal;
+    directory::String, saveiterates::Bool, nocollect::Bool)
     
     # Extract components
     @↓ finesolver, coarsesolver = parareal
@@ -115,7 +116,7 @@ function parareal_mpi!(
     MPI.Barrier(comm)
     
     # Collect chunk-solutions into solution.lastiterate
-    if rank == root
+    if rank == root && !nocollect
         collect!(solution; directory)
     end
 
