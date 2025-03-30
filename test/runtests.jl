@@ -1,5 +1,8 @@
 using NSDETimeParallel
 using Test
+# using Aqua
+
+# Aqua.test_all(NSDEBase)
 
 @testset "ErrorControl" begin
     # Write your tests here.
