@@ -15,12 +15,13 @@ Weights(; w=1.0, updatew=false)
 # Functions
 - [`update!`](@ref) : updates `w` using (an approximation of) the Lipschitz function of the fine solver.
 """
-mutable struct Weights{w_T<:(Union{AbstractVector{ℝ}, ℝ} where ℝ<:Real), updatew_T<:Bool} <: AbstractWeights
+mutable struct Weights{w_T<:(Union{AbstractVector{ℝ}, ℝ} where ℝ<:Real), updatew_T<:Bool, δ_T<:Real} <: AbstractWeights
     w::w_T
     updatew::updatew_T
+    δ::δ_T
 end
 
-Weights(; w::Union{AbstractVector{ℝ}, ℝ}=1.0, updatew::Bool=false) where ℝ<:Real = Weights(w, updatew)
+Weights(; w::Union{AbstractVector{ℝ}, ℝ}=1.0, updatew::Bool=false, δ::Real=1.0) where ℝ<:Real = Weights(w, updatew, δ)
 
 #---------------------------------- FUNCTIONS ----------------------------------
 
@@ -30,16 +31,15 @@ Weights(; w::Union{AbstractVector{ℝ}, ℝ}=1.0, updatew::Bool=false) where ℝ
 updates `weights.w` based on `U` and `F`.
 """
 function update!(weights::Weights, U::AbstractVector{𝕍}, F::AbstractVector{𝕍}) where 𝕍<:AbstractVector{ℂ} where ℂ<:Number
-    @↓ w, updatew = weights
+    @↓ w, updatew, δ = weights
     # TODO: Add `a` in Weights for Adaptive MoWi
     # @↓ w, updatew, a = weights
-    a = 1
     N = length(U)
     w₁ = 0.0
     w₂ = 0.0
     if updatew
         for i = 2:N-1
-            r = a * norm(F[i+1] - F[i]) / norm(U[i] - U[i-1])
+            r = norm(F[i+1] - F[i]) / norm(U[i] - U[i-1])
             w₁ += r
             w₂ = max(w₂, r)
         end
@@ -47,7 +47,7 @@ function update!(weights::Weights, U::AbstractVector{𝕍}, F::AbstractVector{�
     end
     a₁ = 0.0
     a₂ = 1.0
-    w = max(w, a₁ * w₁ + a₂ * w₂)
+    w = max(w, a₁ * w₁ + a₂ * w₂) / δ
     @↑ weights = w
     return weights
 end
