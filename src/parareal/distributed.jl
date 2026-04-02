@@ -16,36 +16,62 @@ function parareal_distributed!(
         mkpath(directory)
     end
 
+    # 1. Pre-allocate zero-allocation cache for the coarse solver (Master Node only)
+    dummy_chunk = copy(problem, U[1], T[1], T[2])
+    master_coarse_cache = NSDEBase.initialize_cache(dummy_chunk, coarsesolver)
+    master_coarse_sol   = NSDEBase.initialize_solution(dummy_chunk, coarsesolver)
+
     F[1] = G[1] = U[1]
+
+    # Allocate inner buffers to give copyto! physical memory
+    for n = 2:N
+        if !isassigned(U, n) U[n] = similar(U[1]) end
+        if !isassigned(G, n) G[n] = similar(U[1]) end
+        if !isassigned(F, n) F[n] = similar(U[1]) end
+    end
     
+    # Coarse run (serial on master)
     for n = 1:N-1
         chunkproblem = copy(problem, U[n], T[n], T[n+1])
-        chunkcoarsesolution = coarsesolver(chunkproblem)
-        G[n+1] = chunkcoarsesolution(T[n+1])
+        NSDEBase.solve!(master_coarse_cache, master_coarse_sol, chunkproblem, coarsesolver)
+        
+        copyto!(G[n+1], master_coarse_sol(T[n+1]))
         if makeGs[n+1]
-            U[n+1] = copy(G[n+1])
+            copyto!(U[n+1], G[n+1])
         end
     end
 
     for k = 1:K
-        # Pure mathematical mapping without global variables or disk I/O
+        # Pure mathematical mapping without returning heavy arrays
         function finesolve(n)
             local_problem = copy(problem, U[n], T[n], T[n+1])
             local_solution = finesolver(local_problem)
-            return local_solution(T[n+1]), local_solution
+            
+            # Worker writes to disk directly to bypass the IPC bottleneck
+            if saveiterates
+                filename = joinpath(directory, "iter_$(k)_chunk_$(n).jls")
+                open(filename, "w") do file
+                    serialize(file, (chunk_n = local_solution,))
+                end
+            end
+            
+            filename = joinpath(directory, "lastiter_chunk_$(n).jls")
+            open(filename, "w") do file
+                serialize(file, (chunk_n = local_solution,))
+            end
+            
+            # ONLY return the lightweight boundary value to the master
+            return local_solution(T[n+1])
         end
         
         # Dispatch to workers
         fineresults = pmap(finesolve, WorkerPool(workers()[k:N]), k:N)
         
-        # CRITICAL FIX: Loop up to N to ensure all chunks are saved.
-        # F[n+1] is only updated if n < N.
+        # Master updates F with the lightweight boundary values
         for n = k:N
-            final_state, local_sol = fineresults[n-k+1]
-            solution[n] = local_sol
-            
+            final_state = fineresults[n-k+1]
             if n < N
-                F[n+1] = final_state
+                copyto!(F[n+1], final_state)
             end
         end
 
@@ -59,24 +85,18 @@ function parareal_distributed!(
 
         for n = k:N-1
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
-            chunkcoarsesolution = coarsesolver(chunkproblem)
-            v = chunkcoarsesolution(T[n+1])
+            NSDEBase.solve!(master_coarse_cache, master_coarse_sol, chunkproblem, coarsesolver)
+            
+            v = master_coarse_sol(T[n+1])
             
             U[n+1] = v + F[n+1] - G[n+1]
-            G[n+1] = v
+            copyto!(G[n+1], v)
         end
     end
 
-    # Serialise the collected solutions from the master process memory
+    # Master reads the collected solutions from disk back into memory
     if !nocollect
-        for n = 1:N
-            if isassigned(solution.lastiterate.chunks, n)
-                filename = joinpath(directory, "lastiter_chunk_$(n).jls")
-                open(filename, "w") do file
-                    serialize(file, (chunk_n = solution[n],))
-                end
-            end
-        end
+        collect!(solution; directory)
     end
 
     return solution

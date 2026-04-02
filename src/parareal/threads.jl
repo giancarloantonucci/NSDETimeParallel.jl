@@ -15,10 +15,12 @@ function parareal_threads!(
     @↓ makeGs, U, T, F, G = cache 
     @↓ errors = solution
 
-    # 1. Pre-allocate thread-safe caches and solution objects
+    # 1. Pre-allocate thread-safe caches and solution objects for BOTH solvers
     dummy_chunk = copy(problem, U[1], T[1], T[2])
-    fine_caches = [NSDEBase.initialize_cache(dummy_chunk, finesolver) for _ in 1:N]
-    fine_sols   = [NSDEBase.initialize_solution(dummy_chunk, finesolver) for _ in 1:N]
+    fine_caches   = [NSDEBase.initialize_cache(dummy_chunk, finesolver) for _ in 1:N]
+    fine_sols     = [NSDEBase.initialize_solution(dummy_chunk, finesolver) for _ in 1:N]
+    coarse_caches = [NSDEBase.initialize_cache(dummy_chunk, coarsesolver) for _ in 1:N]
+    coarse_sols   = [NSDEBase.initialize_solution(dummy_chunk, coarsesolver) for _ in 1:N]
 
     # Initialization
     F[1] = G[1] = U[1]
@@ -33,10 +35,12 @@ function parareal_threads!(
     # Coarse run (strictly serial)
     for n = 1:N-1
         chunkproblem = copy(problem, U[n], T[n], T[n+1])
-        # TODO: For maximum performance, pre-allocate the coarse solver cache too!
-        chunkcoarsesolution = coarsesolver(chunkproblem)
         
-        copyto!(G[n+1], chunkcoarsesolution(T[n+1])) 
+        local_coarse_cache = coarse_caches[n]
+        local_coarse_sol   = coarse_sols[n]
+        NSDEBase.solve!(local_coarse_cache, local_coarse_sol, chunkproblem, coarsesolver)
+        
+        copyto!(G[n+1], local_coarse_sol(T[n+1])) 
         if makeGs[n+1]
             copyto!(U[n+1], G[n+1])
         end
@@ -57,8 +61,7 @@ function parareal_threads!(
             solution[n] = local_sol 
 
             if n < N
-                # CRITICAL FIX: Restore the interpolation function to exactly match
-                # the serial float math, preventing chaotic divergence!
+                # Restore interpolation function to exactly match serial float math
                 copyto!(F[n+1], local_sol(T[n+1]))
             end
         end
@@ -67,7 +70,7 @@ function parareal_threads!(
         if saveiterates
             current_history_step = solution.iterates[k]
             for n = 1:N
-                # CRITICAL FIX: Must deepcopy because local_sol mutates next iteration
+                # Must deepcopy because local_sol mutates next iteration
                 current_history_step[n] = deepcopy(solution[n])
             end
         end
@@ -88,14 +91,18 @@ function parareal_threads!(
         # Correction step (serial)
         for n = k:N-1
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
-            chunkcoarsesolution = coarsesolver(chunkproblem)
             
-            v = chunkcoarsesolution(T[n+1])
+            local_coarse_cache = coarse_caches[n]
+            local_coarse_sol   = coarse_sols[n]
+            NSDEBase.solve!(local_coarse_cache, local_coarse_sol, chunkproblem, coarsesolver)
             
-            # CRITICAL FIX: Rebind the array instead of mutating in-place.
-            # This prevents U_previous in the error function from being overwritten!
+            v = local_coarse_sol(T[n+1])
+            
+            # Rebind the array instead of mutating in-place to protect error function history
             U[n+1] = v + F[n+1] - G[n+1]
-            G[n+1] = v
+            
+            # Must explicitly copyto! G to prevent alias bleeding
+            copyto!(G[n+1], v)
         end
     end
 

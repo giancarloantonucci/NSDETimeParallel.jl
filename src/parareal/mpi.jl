@@ -17,7 +17,7 @@ function parareal_mpi!(
     size = MPI.Comm_size(comm)
     root = 0
 
-    # CRITICAL FIX: Align 0-indexed MPI ranks with 1-indexed Julia chunks
+    # Align 0-indexed MPI ranks with 1-indexed Julia chunks
     n = rank + 1 
 
     if rank == root && !isdir(directory)
@@ -25,15 +25,37 @@ function parareal_mpi!(
     end
     MPI.Barrier(comm)
 
+    # 1. Pre-allocate zero-allocation caches
+    dummy_chunk = copy(problem, U[1], T[1], T[2])
+    
+    # Every rank handles exactly one time chunk per iteration, so it only needs ONE fine cache.
+    local_fine_cache = NSDEBase.initialize_cache(dummy_chunk, finesolver)
+    local_fine_sol   = NSDEBase.initialize_solution(dummy_chunk, finesolver)
+    
+    # Only the master coordinates the coarse solves serially, so it only needs ONE coarse cache.
+    if rank == root
+        master_coarse_cache = NSDEBase.initialize_cache(dummy_chunk, coarsesolver)
+        master_coarse_sol   = NSDEBase.initialize_solution(dummy_chunk, coarsesolver)
+    end
+
+    # Allocate the inner buffers for U, G, F to prevent UndefRefErrors
+    for m = 2:N
+        if !isassigned(U, m) U[m] = similar(U[1]) end
+        if !isassigned(G, m) G[m] = similar(U[1]) end
+        if !isassigned(F, m) F[m] = similar(U[1]) end
+    end
+
     if rank == root
         F[1] = G[1] = U[1]
         # Coarse run (strictly serial on master)
         for m = 1:N-1
             chunkproblem = copy(problem, U[m], T[m], T[m+1])
-            chunkcoarsesolution = coarsesolver(chunkproblem)
-            G[m+1] = chunkcoarsesolution(T[m+1])
+            NSDEBase.solve!(master_coarse_cache, master_coarse_sol, chunkproblem, coarsesolver)
+            
+            # Must copy to prevent alias bleeding when master_coarse_sol is reused
+            copyto!(G[m+1], master_coarse_sol(T[m+1]))
             if makeGs[m+1]
-                U[m+1] = copy(G[m+1])
+                copyto!(U[m+1], G[m+1])
             end
         end
     end
@@ -41,7 +63,6 @@ function parareal_mpi!(
     T = MPI.bcast(T, root, comm)
 
     isconverged = false
-    local_fine_chunk = nothing
 
     for k = 1:K
         # 1. Distribute specific starting points
@@ -53,29 +74,29 @@ function parareal_mpi!(
                 end
             end
         elseif n >= k
-            if !isassigned(U, n) U[n] = similar(U[1]) end
             MPI.Recv!(U[n], comm; source=root, tag=n)
         end
 
         # 2. Fine run (parallel execution across all ranks, including root)
         if n >= k && n <= N
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
-            local_fine_chunk = finesolver(chunkproblem)
+            NSDEBase.solve!(local_fine_cache, local_fine_sol, chunkproblem, finesolver)
             
             if saveiterates
                 filename = joinpath(directory, "iter_$(k)_chunk_$(n).jls")
                 open(filename, "w") do file
-                    serialize(file, (chunk_n = local_fine_chunk,))
+                    # Must deepcopy because local_fine_sol will be overwritten
+                    serialize(file, (chunk_n = deepcopy(local_fine_sol),))
                 end
             end
             
             if n < N
-                U_n_plus_1 = local_fine_chunk(T[n+1])
+                U_n_plus_1 = local_fine_sol(T[n+1])
                 # Worker sends result back to root
                 if rank != root
                     MPI.Send(U_n_plus_1, comm; dest=root, tag=n+N)
                 else
-                    F[n+1] = U_n_plus_1 # Root handles its own chunk locally
+                    copyto!(F[n+1], U_n_plus_1) # Root handles its own chunk locally
                 end
             end
         end
@@ -85,7 +106,6 @@ function parareal_mpi!(
             for src_rank = 1:size-1
                 w = src_rank + 1
                 if w >= k && w < N
-                    if !isassigned(F, w+1) F[w+1] = similar(U[1]) end
                     MPI.Recv!(F[w+1], comm; source=src_rank, tag=w+N)
                 end
             end
@@ -109,20 +129,24 @@ function parareal_mpi!(
         if rank == root
             for m = k:N-1
                 chunkproblem = copy(problem, U[m], T[m], T[m+1])
-                chunkcoarsesolution = coarsesolver(chunkproblem)
-                v = chunkcoarsesolution(T[m+1])
+                NSDEBase.solve!(master_coarse_cache, master_coarse_sol, chunkproblem, coarsesolver)
                 
+                v = master_coarse_sol(T[m+1])
+                
+                # Rebind U to protect U_previous in the error function ψ₁
                 U[m+1] = v + F[m+1] - G[m+1]
-                G[m+1] = v
+                
+                # Explicit copyto! for G to prevent alias bleeding from reused coarse sol
+                copyto!(G[m+1], v)
             end
         end
     end
 
     # Serialise cleanly at the end
-    if local_fine_chunk !== nothing
+    if n <= N
         filename = joinpath(directory, "lastiter_chunk_$(n).jls")
         open(filename, "w") do file
-            serialize(file, (chunk_n = local_fine_chunk,))
+            serialize(file, (chunk_n = deepcopy(local_fine_sol),))
         end
     end
 
