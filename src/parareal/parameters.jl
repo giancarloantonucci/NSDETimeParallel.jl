@@ -1,3 +1,5 @@
+# src/parareal/parameters.jl
+
 """
     PararealParameters <: AbstractPararealParameters
 

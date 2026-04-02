@@ -1,3 +1,5 @@
+# src/tolerance.jl
+
 "standard error function."
 function ψ₁(cache, k, weights)
     @↓ U, T, U_previous ← U_ = cache

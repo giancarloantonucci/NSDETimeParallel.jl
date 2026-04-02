@@ -1,51 +1,55 @@
-"Serial implementation of Parareal."
-function parareal_serial!(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem, parareal::Parareal)
-    @↓ makeGs, F, G = cache
-    @↓ errors, iterates = solution
-    @↓ U, T = solution.lastiterate
-    @↓ u0, (t0, tN) ← tspan = problem
-    @↓ finesolver, coarsesolver, saveiterates = parareal
+"Serial implementation of Parareal (In-Memory)."
+function parareal_serial!(
+    cache::PararealCache, solution::PararealSolution,
+    problem::AbstractInitialValueProblem, parareal::Parareal;
+    directory::String, saveiterates::Bool, nocollect::Bool)
+    
+    # Extract components
+    @↓ finesolver, coarsesolver = parareal
     @↓ N, K = parareal.parameters
     @↓ weights, ψ, ϵ = parareal.tolerance
+    
+    # Get U and T from cache
+    @↓ makeGs, U, T, F, G = cache 
+    @↓ errors = solution
 
     # Initialization
-    for n = 1:N+1
-        T[n] = (N - n + 1) / N * t0 + (n - 1) / N * tN # stable sum
-    end
-    F[1] = G[1] = U[1] = u0
-
+    F[1] = G[1] = U[1]
+    
     # Coarse run (serial)
     for n = 1:N-1
         chunkproblem = copy(problem, U[n], T[n], T[n+1])
         chunkcoarsesolution = coarsesolver(chunkproblem)
         G[n+1] = chunkcoarsesolution(T[n+1])
         if makeGs[n+1]
-            U[n+1] = G[n+1]
+            U[n+1] = copy(G[n+1])
         end
     end
 
     # Main loop
-    for k in 1:K
-
-        # Fine run (parallelisable)
+    for k = 1:K
+        # Fine run (Serial loop)
         for n = k:N
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
             chunkfinesolution = finesolver(chunkproblem)
-            solution[n] = chunkfinesolution
+            
+            # DIRECT STORAGE: Write directly into the solution object
+            # This works because solution.lastiterate is a vector of chunks in memory
+            solution[n] = chunkfinesolution 
+
+            # Update F
             if n < N
                 F[n+1] = chunkfinesolution(T[n+1])
             end
         end
 
-        # Save iterates
+        # Save history if requested
         if saveiterates
-            iterates[k].U .= U
-            iterates[k].T .= T
-            for n = 1:k-1
-                iterates[k][n] = iterates[k-1][n]
-            end
-            for n = k:N
-                iterates[k][n] = solution[n]
+            # We copy the pointers from the current `lastiterate` (solution)
+            # to the history vector `iterates[k]`
+            current_history_step = solution.iterates[k]
+            for n = 1:N
+                current_history_step[n] = solution[n]
             end
         end
 
@@ -53,24 +57,23 @@ function parareal_serial!(cache::PararealCache, solution::PararealSolution, prob
         update!(weights, U, F)
 
         # Check convergence
-        errors[k] = ψ(cache, solution, k, weights)
+        errors[k] = ψ(cache, k, weights)
         if errors[k] ≤ ϵ
-            resize!(errors, k) # self-updates inside solution
+            resize!(errors, k)
             if saveiterates
-                resize!(iterates, k) # self-updates inside solution
+                resize!(solution.iterates, k)
             end
             break
         end
 
-        # correction step (serial)
+        # Correction step (serial)
         for n = k:N-1
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
-            chunkfinesolution = coarsesolver(chunkproblem)
-            v = chunkfinesolution(T[n+1])
+            chunkcoarsesolution = coarsesolver(chunkproblem)
+            v = chunkcoarsesolution(T[n+1])
             U[n+1] = v + F[n+1] - G[n+1]
             G[n+1] = v
         end
-        
     end
 
     return solution

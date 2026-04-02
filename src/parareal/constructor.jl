@@ -1,3 +1,5 @@
+# src/parareal/constructor.jl
+
 """
     Parareal <: AbstractTimeParallelSolver
 

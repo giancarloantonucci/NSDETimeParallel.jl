@@ -1,25 +1,23 @@
+# src/parareal/distributed.jl
+
 "Distributed implementation of Parareal."
 function parareal_distributed!(
     cache::PararealCache, solution::PararealSolution,
     problem::AbstractInitialValueProblem, parareal::Parareal;
     directory::String, saveiterates::Bool, nocollect::Bool)
     
-    # Extract components
     @↓ finesolver, coarsesolver = parareal
     @↓ N, K = parareal.parameters
     @↓ weights, ψ, ϵ = parareal.tolerance
     @↓ makeGs, U, T, F, G = cache
     @↓ errors = solution
 
-    # Ensure directory exists (only rank 0 creates it)
     if !isdir(directory)
         mkpath(directory)
     end
 
-    # Initialization
     F[1] = G[1] = U[1]
     
-    # Coarse run (serial)
     for n = 1:N-1
         chunkproblem = copy(problem, U[n], T[n], T[n+1])
         chunkcoarsesolution = coarsesolver(chunkproblem)
@@ -29,65 +27,56 @@ function parareal_distributed!(
         end
     end
 
-    # Main loop
     for k = 1:K
-        # Fine run (parallelised with pmap)
-        # docs: @distributed for many simple operations / pmap for a few complex operations
-        function finesolve(worker_rank)
-            n = worker_rank
-            chunkproblem = copy(problem, U[n], T[n], T[n+1])
-            global chunkfinesolution # save full chunk solution locally for later retrieval
-            chunkfinesolution = finesolver(chunkproblem)
-            # Save chunks at current iteration
-            if saveiterates
-                filename = joinpath(directory, "iter_$(k)_chunk_$(n).jls")
-                open(filename, "w") do file
-                    local_data = (chunk_n = chunkfinesolution,)
-                    serialize(file, local_data)
-                end
-            end
-            U_n_plus_1 = chunkfinesolution(T[n+1])
-            return U_n_plus_1
+        # Pure mathematical mapping without global variables or disk I/O
+        function finesolve(n)
+            local_problem = copy(problem, U[n], T[n], T[n+1])
+            local_solution = finesolver(local_problem)
+            return local_solution(T[n+1]), local_solution
         end
+        
+        # Dispatch to workers
         fineresults = pmap(finesolve, WorkerPool(workers()[k:N]), k:N)
-        for n = k:N-1
-            F[n+1] = fineresults[n-k+1]
+        
+        # CRITICAL FIX: Loop up to N to ensure all chunks are saved.
+        # F[n+1] is only updated if n < N.
+        for n = k:N
+            final_state, local_sol = fineresults[n-k+1]
+            solution[n] = local_sol
+            
+            if n < N
+                F[n+1] = final_state
+            end
         end
 
-        # Update weights of error function
         update!(weights, U, F)
 
-        # Check convergence
         errors[k] = ψ(cache, k, weights)
         if errors[k] ≤ ϵ
-            resize!(errors, k) # self-updates inside solution
+            resize!(errors, k)
             break
         end
 
-        # Correction step (serial)
         for n = k:N-1
             chunkproblem = copy(problem, U[n], T[n], T[n+1])
             chunkcoarsesolution = coarsesolver(chunkproblem)
             v = chunkcoarsesolution(T[n+1])
+            
             U[n+1] = v + F[n+1] - G[n+1]
             G[n+1] = v
         end
     end
 
-    # Save chunk-solutions from workers
-    function saveresults(worker_rank)
-        n = worker_rank
-        filename = joinpath(directory, "lastiter_chunk_$(n).jls")
-        open(filename, "w") do file
-            local_data = (chunk_n = chunkfinesolution,)
-            serialize(file, local_data)
-        end
-    end
-    pmap(saveresults, WorkerPool(workers()[1:N]), 1:N)
-
-    # Collect chunk-solutions into solution.lastiterate
+    # Serialise the collected solutions from the master process memory
     if !nocollect
-        collect!(solution; directory)
+        for n = 1:N
+            if isassigned(solution.lastiterate.chunks, n)
+                filename = joinpath(directory, "lastiter_chunk_$(n).jls")
+                open(filename, "w") do file
+                    serialize(file, (chunk_n = solution[n],))
+                end
+            end
+        end
     end
 
     return solution

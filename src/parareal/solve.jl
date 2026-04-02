@@ -1,9 +1,15 @@
+# src/parareal/solve.jl
+
 function (parareal::Parareal)(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem;
-    directory::String="results", mode::String="DISTRIBUTED", saveiterates::Bool=false, nocollect::Bool=false)
-    if mode == "DISTRIBUTED"
+    directory::String="results", mode::String="SERIAL", saveiterates::Bool=false, nocollect::Bool=false)
+    if mode == "THREADS"
+        parareal_threads!(cache, solution, problem, parareal; directory, saveiterates, nocollect)
+    elseif mode == "DISTRIBUTED"
         parareal_distributed!(cache, solution, problem, parareal; directory, saveiterates, nocollect)
     elseif mode == "MPI"
         parareal_mpi!(cache, solution, problem, parareal; directory, saveiterates, nocollect)
+    elseif mode == "SERIAL"
+        parareal_serial!(cache, solution, problem, parareal; directory, saveiterates, nocollect)
     end
     return solution
 end

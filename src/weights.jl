@@ -1,3 +1,5 @@
+# src/weights.jl
+
 """
     Weights <: AbstractWeights
 

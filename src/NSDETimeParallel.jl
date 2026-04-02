@@ -1,3 +1,5 @@
+# src/NSDETimeParallel.jl
+
 module NSDETimeParallel
 
 using Distributed
@@ -21,7 +23,8 @@ include("parareal/iterate.jl")
 include("parareal/solution.jl")
 # include("parareal/coarseguess.jl")
 # include("parareal/utils.jl")
-# include("parareal/serial.jl")
+include("parareal/serial.jl")
+include("parareal/threads.jl")
 include("parareal/distributed.jl")
 include("parareal/mpi.jl")
 include("parareal/solve.jl")
