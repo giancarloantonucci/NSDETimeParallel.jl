@@ -85,7 +85,7 @@ Base.getindex(solution::PararealSolution, n::Integer) = solution.lastiterate[n]
 """
     setindex!(solution::PararealSolution, chunk::AbstractInitialValueSolution, n::Integer)
 
-stores an [`AbstractInitialValueSolution`](@ref) as the `n`-th chunk of the last iteration of a [`PararealSolution`](@ref).
+stores an `AbstractInitialValueSolution` as the `n`-th chunk of the last iteration of a [`PararealSolution`](@ref).
 """
 Base.setindex!(solution::PararealSolution, chunk::AbstractInitialValueSolution, n::Integer) = solution.lastiterate[n] = chunk
 
