@@ -1,25 +1,23 @@
 using Documenter
-using DocumenterInterLinks
-using NSDEBase, NSDETimeParallel
+using NSDETimeParallel
 
-PAGES = ["Home" => "index.md"]
-
-links = InterLinks(
-    "NSDEBase" => (
-        "https://giancarloantonucci.github.io/NSDEBase.jl/dev/",
-        "https://giancarloantonucci.github.io/NSDEBase.jl/dev/objects.inv"
-    )
-)
+PAGES = [
+    "Home" => "index.md",
+    "Conventions" => "conventions.md",
+    "Backends" => "backends.md",
+    "Criterion" => "criterion.md",
+    "API" => "api.md"
+]
 
 makedocs(;
     sitename = "NSDETimeParallel.jl",
     format = Documenter.HTML(),
     modules = [NSDETimeParallel],
     pages = PAGES,
-    authors = "Giancarlo A. Antonucci <giancarlo.antonucci@icloud.com>",
-    plugins = [links],
+    checkdocs = :exports, # every export must carry a docstring, or the build fails
+    authors = "Giancarlo A. Antonucci <giancarlo.antonucci@icloud.com>"
 )
 
 deploydocs(;
-    repo = "https://github.com/giancarloantonucci/NSDETimeParallel.jl"
+    repo = "github.com/giancarloantonucci/NSDETimeParallel.jl.git"
 )
