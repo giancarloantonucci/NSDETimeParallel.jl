@@ -1,7 +1,7 @@
 name = "NSDETimeParallel"
 uuid = "589f7035-6b7a-40e5-abe3-32909204d25a"
+version = "0.2.0"
 authors = ["Giancarlo A. Antonucci"]
-version = "0.1.0"
 
 [deps]
 ArrowMacros = "46a4b217-d1c8-4502-9c1a-7bf73a71908c"
@@ -14,10 +14,29 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
 [compat]
-ArrowMacros = "0.1, 0.2"
+Aqua = "0.8"
+ArrowMacros = "0.2"
+Distributed = "1"
+LinearAlgebra = "1"
 MPI = "0.20"
-NSDEBase = "0.3"
-RecipesBase = "0.7.0, 0.8, 1.0"
-Reexport = "0.2, 1.0"
-Serialization = "1.10, 1.11"
-julia = "1.10, 1"
+NSDEBase = "0.3.1"
+NSDERungeKutta = "0.2"
+RecipesBase = "1"
+Reexport = "1"
+Serialization = "1"
+Test = "1"
+julia = "1.6"
+
+[extras]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+NSDEBase = "5aa61ba9-7752-4810-b2ec-484f26c3f007"
+NSDERungeKutta = "3978d399-9848-4322-9a48-ca26b732c7dc"
+RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Aqua", "Distributed", "LinearAlgebra", "MPI", "NSDEBase", "NSDERungeKutta", "RecipesBase", "Serialization", "Test"]

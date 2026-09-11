@@ -1,9 +1,9 @@
 # src/abstract.jl
 
-"An abstract type for time-parallel solvers of [`NSDEBase.AbstractInitialValueProblem`](@extref)s."
+"An abstract type for time-parallel solvers of `NSDEBase.AbstractInitialValueProblem`s."
 abstract type AbstractTimeParallelSolver <: AbstractInitialValueSolver end
 
-"An abstract type for time-parallel solutions of [`NSDEBase.AbstractInitialValueProblem`](@extref)s."
+"An abstract type for time-parallel solutions of `NSDEBase.AbstractInitialValueProblem`s."
 abstract type AbstractTimeParallelSolution <: AbstractInitialValueSolution end
 
 "An abstract type for iterates in [`AbstractTimeParallelSolution`](@ref)s."

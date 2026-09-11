@@ -14,25 +14,11 @@
             iterate[n]
         end
     end
-    
-    # solves a bug in Plots with OrdinaryDiffEq
-    # primary := false
-    # ()
 end
 
-@recipe function f(solution::PararealSolution)#; showiterates=false)
-    # if showiterates
-    #     @↓ iterates = solution
-    #     for (i, iterate) in enumerate(iterates)
-    #         @series begin
-    #             # colour := i
-    #             iterate
-    #         end
-    #     end
-    # else
-        @↓ lastiterate = solution
-        return lastiterate
-    # end
+@recipe function f(solution::PararealSolution)
+    @↓ lastiterate = solution
+    return lastiterate
 end
 
 @recipe function f(wrapper::NSDEBase._PhasePlot{<:PararealIterate})

@@ -110,31 +110,25 @@ returns a [`PararealSolution`](@ref) constructor for the solution of `problem` w
 """
 TimeParallelSolution(problem::AbstractInitialValueProblem, parareal::Parareal) = PararealSolution(problem, parareal)
 
-# function Wnorm(solution::PararealSolution, reference::AbstractInitialValueSolution, w::Number)
-#     K = length(solution.errors)
-#     if solution.iterates isa Nothing
-#         return error("`Wnorm`: `(solution::PararealSolution).iterates` contains `nothing`. Solve with `saveiterates = true`.")
-#     else
-#         return [Wnorm(solution.iterates[k], reference, w) for k = 1:K]
-#     end
-# end
+"""
+    collect_iterates!(solution::PararealSolution; directory)
 
-# function collect!(solution::PararealSolution)
-#     N = length(solution.lastiterate)
-#     for n = 1:N
-#         solution[n] = @fetchfrom workers()[n] NSDETimeParallel.chunkfinesolution
-#     end
-#     return solution
-# end
-
-function collect!(solution::PararealSolution; directory::String="results")
-    for n = 1:numchunks(solution)
-        filename = joinpath(directory, "lastiter_chunk_$(n).jls")
-        if isfile(filename)
-            open(filename, "r") do file
-                local_data = deserialize(file)
+reads the per-iterate chunk files written by the MPI backend under
+`saveiterates` back into `solution.iterates`. Chunks below the diagonal
+(`n < k`) are final from earlier iterations and are copied forward.
+"""
+function collect_iterates!(solution::PararealSolution; directory::String)
+    solution.iterates isa Nothing && throw(ArgumentError("`collect_iterates!` needs a solution built with `saveiterates = true`."))
+    for k = 1:numiterates(solution)
+        for n = 1:k-1
+            solution.iterates[k][n] = solution.iterates[k-1][n]
+        end
+        for n = k:numchunks(solution)
+            filename = joinpath(directory, "iter_$(k)_chunk_$(n).jls")
+            if isfile(filename)
+                local_data = open(deserialize, filename, "r")
                 if local_data.chunk_n !== nothing
-                    solution.lastiterate[n] = local_data.chunk_n
+                    solution.iterates[k][n] = local_data.chunk_n
                 end
             end
         end
@@ -142,40 +136,24 @@ function collect!(solution::PararealSolution; directory::String="results")
     return solution
 end
 
-function collect_iterates(iterates::AbstractVector{<:PararealIterate}; directory::String="results")
-    @↓ iterates = solution
-    for k = 1:numiterates(solution)
-        for n = 1:numchunks(solution)
-            filename = joinpath(directory, "iter_$(k)_chunk_$(n).jls")
-            if isfile(filename)
-                open(filename, "r") do file
-                    local_data = deserialize(file)
-                    if local_data.chunk_n !== nothing
-                        iterates[k][n] = local_data.chunk_n
-                    end
-                end
-            end
-        end
-    end
-    return iterates
-end
+"""
+    flatten(solution::PararealSolution)
 
-# function collect_iterates!(solution::PararealSolution; dir::String="results")
-#     for k = 1:numiterates(solution)
-#         for n = 1:k-1
-#             solution.iterates[k][n] = solution.iterates[k-1][n]
-#         end
-#         for n = k:numchunks(solution)
-#             filename = joinpath(dir, "iter_$(k)_chunk_$(n).jls")
-#             if isfile(filename)
-#                 open(filename, "r") do file
-#                     local_data = deserialize(file)
-#                     if local_data.chunk_n !== nothing
-#                         solution.iterates[k][n] = local_data.chunk_n
-#                     end
-#                 end
-#             end
-#         end
-#     end
-#     return solution
-# end
+[`flatten`](@ref)s the last iterate: one `(u, t)` pair for the whole span,
+chunk boundaries deduplicated.
+"""
+flatten(solution::PararealSolution) = flatten(solution.lastiterate)
+
+"""
+    seams(solution::PararealSolution) :: Vector{<:Real}
+
+[`seams`](@ref) of the last iterate.
+"""
+seams(solution::PararealSolution) = seams(solution.lastiterate)
+
+"""
+    maxseam(solution::PararealSolution) :: Real
+
+[`maxseam`](@ref) of the last iterate.
+"""
+maxseam(solution::PararealSolution) = maxseam(solution.lastiterate)
