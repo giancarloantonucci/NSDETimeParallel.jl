@@ -25,7 +25,7 @@ make_parareal(; N=5, K=N, ϵ=1e-12, coarse=coarsesolver) =
 @testset "NSDETimeParallel" begin
 
 @testset "Aqua" begin
-    Aqua.test_all(NSDETimeParallel; persistent_tasks=false, piracies=(; treat_as_own=[NSDETimeParallel.RecipesBase.recipetype]))
+    Aqua.test_all(NSDETimeParallel; piracies=(; treat_as_own=[NSDETimeParallel.RecipesBase.recipetype]))
 end
 
 @testset "theoretical_speedup" begin
@@ -595,3 +595,5 @@ end
 
 
 end # outer testset
+
+

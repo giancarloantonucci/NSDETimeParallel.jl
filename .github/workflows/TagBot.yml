@@ -1,7 +1,4 @@
-# Inert until the package is in a registry: TagBot reacts to registry merges.
-# Kept so it goes live the moment the package is registered in General.
-# The deprecated `lookback` input and the over-broad permissions list of the
-# stock template are dropped.
+# TagBot creates release tags following registry merges.
 name: TagBot
 on:
   issue_comment:
@@ -26,3 +23,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ssh: ${{ secrets.DOCUMENTER_KEY }}   # so the created tag triggers Documenter
+
+

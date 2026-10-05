@@ -23,10 +23,8 @@ jobs:
           show-versioninfo: true
       - uses: julia-actions/cache@v3
 
-      # docs/Project.toml carries a [sources] table (honoured by Pkg on
-      # Julia ≥ 1.11) pointing the unregistered NSDE dependencies at their
-      # repositories at the released tags, so this step needs nothing but
-      # the package itself.
+      # Develop this checkout into the docs environment. Dependencies resolve
+      # from General under the package compatibility bounds.
       - name: Install dependencies
         shell: julia --color=yes --project=docs {0}
         run: |
@@ -39,3 +37,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
         run: julia --color=yes --project=docs docs/make.jl
+
+

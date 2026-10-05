@@ -1,6 +1,6 @@
 name = "NSDETimeParallel"
 uuid = "589f7035-6b7a-40e5-abe3-32909204d25a"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Giancarlo A. Antonucci"]
 
 [deps]
@@ -16,15 +16,15 @@ Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 [compat]
 Aqua = "0.8"
 ArrowMacros = "0.2"
-Distributed = "1"
-LinearAlgebra = "1"
+Distributed = "<0.0.1, 1"
+LinearAlgebra = "<0.0.1, 1"
 MPI = "0.20"
 NSDEBase = "0.3.1"
 NSDERungeKutta = "0.2"
 RecipesBase = "1"
 Reexport = "1"
-Serialization = "1"
-Test = "1"
+Serialization = "<0.0.1, 1"
+Test = "<0.0.1, 1"
 julia = "1.6"
 
 [extras]
@@ -40,3 +40,5 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Aqua", "Distributed", "LinearAlgebra", "MPI", "NSDEBase", "NSDERungeKutta", "RecipesBase", "Serialization", "Test"]
+
+

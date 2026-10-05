@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.1
+
+### Fixed
+- Standard-library compatibility bounds admit the unversioned stdlibs used in
+  Julia 1.6 test environments.
+- The MPI CI environment explicitly installs NSDERungeKutta 0.2, required by
+  the standalone MPI tests but not installed through the package's test extras
+  when that test file is run directly.
+
+### Tests and maintenance
+- Re-enable Aqua's persistent-task check following package registration.
+- Refresh workflow comments to describe registered dependencies.
+
 ## 0.2.0
 
 Requires NSDEBase 0.3.1 and NSDERungeKutta 0.2 (test dependency).
@@ -45,3 +58,5 @@ Requires NSDEBase 0.3.1 and NSDERungeKutta 0.2 (test dependency).
 ### Migration
 - `collect!(solution)` → `collect_iterates!(solution; directory)`.
 - `Weights(w=[...])` → a single scalar base.
+
+

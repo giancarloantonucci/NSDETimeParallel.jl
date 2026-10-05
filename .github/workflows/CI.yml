@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The declared minimum (Project.toml `julia = "1.6"`, verified 1.6–1.13)
+        # The declared minimum (Project.toml `julia = "1.6"`) is
         # spelled out so it does not move with the LTS label, plus current stable.
         version: ['1.6', '1']
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -75,8 +75,12 @@ jobs:
           using Pkg
           Pkg.develop(path=pwd())
           Pkg.add(["MPI", "Test", "LinearAlgebra"])
+          # Running the MPI file directly does not activate test extras.
+          Pkg.add(PackageSpec(name="NSDERungeKutta", version="0.2"))
           Pkg.instantiate()
           using MPI
           MPI.install_mpiexecjl(destdir=joinpath(pwd(), "mpi-env", "bin"))
       - name: Run the MPI tests
         run: mpi-env/bin/mpiexecjl --project=mpi-env -n 4 julia --color=yes test/mpi/runtests_mpi.jl
+
+
