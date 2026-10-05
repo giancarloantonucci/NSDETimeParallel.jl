@@ -2,20 +2,14 @@
 
 A Julia package implementing time-parallel methods.
 
-[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://giancarloantonucci.github.io/NSDETimeParallel.jl/dev) ![Build Status](https://img.shields.io/github/actions/workflow/status/giancarloantonucci/NSDETimeParallel.jl/CI.yml) ![Coverage Status](https://img.shields.io/codecov/c/github/giancarloantonucci/NSDETimeParallel.jl)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://giancarloantonucci.github.io/NSDETimeParallel.jl/stable) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://giancarloantonucci.github.io/NSDETimeParallel.jl/dev) ![Build Status](https://img.shields.io/github/actions/workflow/status/giancarloantonucci/NSDETimeParallel.jl/CI.yml) ![Coverage Status](https://img.shields.io/codecov/c/github/giancarloantonucci/NSDETimeParallel.jl)
 
 ## Installation
 
-<!-- This package is a [registered package](https://juliahub.com/ui/Search?q=NSDETimeParallel&type=packages) compatible with Julia v1.6 and above. From the Julia REPL,
+NSDETimeParallel is a [registered package](https://juliahub.com/ui/Search?q=NSDETimeParallel&type=packages) compatible with Julia v1.6 and above. From the Julia REPL,
 
 ```
 ]add NSDETimeParallel
-``` -->
-
-This package is compatible with Julia v1.6 and above. From the Julia REPL,
-
-```
-]add https://github.com/giancarloantonucci/NSDETimeParallel.jl
 ```
 
 Read the [documentation](https://giancarloantonucci.github.io/NSDETimeParallel.jl/dev) for a complete overview of this package.
