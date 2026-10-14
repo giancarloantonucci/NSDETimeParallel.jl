@@ -1,23 +1,59 @@
 # Changelog
 
-## 0.3.0 development revision (unreleased)
+## 0.3.0 (unreleased)
 
-- Convert only SolverFailure to nonfinite on non-MPI backends; programming errors propagate. MPI still catches ordinary chunk exceptions to complete communication.
-- Convert fine and coarse chunk-solve exceptions to logged NaN chunks and `:nonfinite` on every backend, retaining MPI message matching. Add multi-rank failure regressions.
-- Plot positive finite residuals on a logarithmic scale and label the first chunk consistently. Update missing-field tests for newer Julia versions.
-- Trim MPI residual histories before broadcasting and restore shared error/residual storage on every rank. Add concrete chunk-kernel dispatch and document pipeline overlap-seeding limitations.
-- Refresh the initial state on cache reuse and rebuild RHS-dependent chunk caches when the problem RHS changes. Reject mismatched spans and state layouts. Validate initial nominal chunk durations and MPI rank counts.
-- Keep nonfinite batch weights aligned with residuals; allow the `wallclock` keyword on all cost-helper overloads. Let the default full budget follow `N` in `remake`.
-- Remove duplicated runtime dependencies from test extras.
-- Cost helpers now count fine batches and exact-prefix coarse calls. The default
-  model is `:wallclock`; solution/diagnostics overloads use recorded calls.
-  `iteration_budget` inverts the same model. The unsupported native-pipeline
-  comparison `:aubanel` is removed.
-- Mark unsolved nonfinite output as NaN. Support cache reuse across weight-rule and solver types. Let Wnorm use measured solution weights and reject adaptive rule settings. Preserve unchanged parameters in remake. Test the RelativeUpdate path through shared fixtures.
-- Nominal chunk durations persist across shifted windows. Distributed endpoints and
-  cost measurements use prepared chunk solvers. Restored multi-threaded CI.
-- Typed criteria and weight rules, `RelativeUpdate()` default, automatic chunk plans, and a serial chunked `reference`. Immutable configuration and cache-local current weights reset on each run. Added unified `history`, typed diagnostics with residuals, and pipeline call/status accounting. Unsupported pipeline criteria now error. `Wnorm` takes a per-time base. Removed legacy tolerance/weight adapters and keywords; MPI remains a hard dependency.
-- All Julia sources, tests, and examples follow the repository JuliaFormatter configuration. Historical implementation notes have been removed from current API descriptions.
+Requires NSDEBase 0.4; the tests use NSDERungeKutta 0.3.
+
+### Breaking
+
+- Typed stopping criteria (`RelativeUpdate`, the default; `WeightedDefect`,
+  `MeanRelativeUpdate`, `NoStop`, `FrontierRelativeUpdate`) and weight rules
+  (`FixedWeight`, `SecantWeight`, `NeighbourWeight`) replace the tolerance and
+  weight keywords; the legacy adapters are removed.
+- Parareal settings are immutable: current weights live in the cache and reset
+  on each run, `remake(parareal; ...)` builds changed settings, and the default
+  full budget follows `N`.
+- `Wnorm` takes a per-unit-time base.
+- Cost helpers count fine batches and exact-prefix coarse calls; the default
+  model is `:wallclock`, and the `:aubanel` comparison is removed.
+- Unsupported pipeline criteria throw.
+- Supported Julia: `1.10` and later.
+
+### Added
+
+- A unified `history` keyword (`:none`, `:interfaces`, `:iterates`); typed
+  `PararealDiagnostics` with residuals, call counts and status, including
+  pipeline accounting.
+- Automatic chunk plans through `chunk_solver`, and a serial chunked
+  `reference`.
+- Multi-rank failure tests.
+
+### Changed
+
+- On non-MPI backends only a `SolverFailure` in a chunk solve becomes a logged
+  NaN chunk and `:nonfinite`; programming errors propagate. MPI still catches
+  ordinary chunk exceptions so that communication completes.
+- Cache reuse refreshes the initial state, rebuilds RHS-dependent chunk caches
+  when the RHS changes, and works across weight-rule and solver types;
+  mismatched spans and state layouts are refused. Nominal chunk durations
+  persist across shifted windows and are validated, as are MPI rank counts.
+- `Wnorm` uses measured solution weights and refuses adaptive rule settings.
+- Distributed endpoints and cost measurements use prepared chunk solvers.
+- Residual plots show positive finite residuals on a logarithmic scale, and the
+  first chunk is labelled consistently.
+- Runtime dependencies are no longer repeated as test extras; multi-threaded
+  CI is restored.
+- Sources, tests and examples follow the repository JuliaFormatter
+  configuration (Blue style), checked in CI.
+
+### Fixed
+
+- Nonfinite batch weights stay aligned with residuals, and every cost-helper
+  overload accepts the `wallclock` keyword.
+- MPI residual histories are trimmed before broadcasting, and error and residual
+  storage is shared on every rank.
+- Unsolved nonfinite output is marked NaN, and `remake` preserves unchanged
+  parameters.
 
 ## 0.2.2 development snapshot
 

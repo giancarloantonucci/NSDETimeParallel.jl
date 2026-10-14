@@ -37,10 +37,10 @@ weight_rule(c::WeightedDefect) = c.weight
 threshold(c::AbstractCriterion) = c.ϵ
 threshold(::RelativeUpdate) = 1.0
 threshold(::NoStop) = 0.0
-"Return whether a criterion accepts its evaluated residual."
+"returns whether a criterion accepts its evaluated residual."
 accept(c::AbstractCriterion, value) = isfinite(value) && value <= threshold(c)
 accept(::NoStop, value) = false
-"Evaluate a criterion from the current fine batch and its cached starts."
+"evaluates a criterion from the current fine batch and its cached starts."
 residual(::NoStop, cache, k) = Inf
 function residual(c::RelativeUpdate, cache, k)
     k == 1 && return Inf
@@ -60,8 +60,8 @@ function residual(::MeanRelativeUpdate, cache, k)
     value = 0.0
     for n in eachindex(cache.U)
         scale = norm(cache.U[n])
-        change = norm(cache.U[n]-previous[n])
-        value += iszero(scale) ? change : change/scale
+        change = norm(cache.U[n] - previous[n])
+        value += iszero(scale) ? change : change / scale
     end
     return value / length(cache.U)
 end
@@ -70,13 +70,15 @@ function residual(c::WeightedDefect, cache, k)
     value = 0.0
     if c.p == 1 || c.p == Inf
         for n in eachindex(cache.U)
-            defect = norm(cache.U[n]-cache.F[n])*w^(cache.T[1]-cache.T[n])
-            value = c.p == 1 ? value+defect : max(value, defect)
+            defect = norm(cache.U[n] - cache.F[n]) * w^(cache.T[1] - cache.T[n])
+            value = c.p == 1 ? value + defect : max(value, defect)
         end
-        return c.p == 1 ? value/length(cache.U) : value
+        return c.p == 1 ? value / length(cache.U) : value
     end
-    values = [norm(cache.U[n]-cache.F[n])*w^(cache.T[1]-cache.T[n]) for n in eachindex(cache.U)]
-    return norm(values, c.p)/length(values)^(1/c.p)
+    values = [
+        norm(cache.U[n] - cache.F[n]) * w^(cache.T[1] - cache.T[n]) for n in eachindex(cache.U)
+    ]
+    return norm(values, c.p) / length(values)^(1 / c.p)
 end
 
 "Pipeline-only relative frontier test. It is not the bulk all-interface update test."

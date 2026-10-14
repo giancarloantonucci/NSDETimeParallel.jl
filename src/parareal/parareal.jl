@@ -1,5 +1,3 @@
-# src/parareal/parareal.jl
-#
 # THE Parareal algorithm — written once. Backends (serial, threads,
 # distributed, MPI) supply execution primitives only; see backends.jl. Any fix
 # made here reaches every backend by construction.
@@ -125,14 +123,17 @@ function parareal!(
             )
         end
         coarseinit!(cache, parareal; mpi=backend isa MPIBackend)
-        diag.coarse_chunk_calls = N-1
+        diag.coarse_chunk_calls = N - 1
         diag.initial_starts = deepcopy(cache.U)
     end
 
     k_final = 0
     for k in 1:min(K, N)
-        starts_finite =
-            is_root(backend) ? !any(cache.chunk_failed) && all(u->all(isfinite, u), cache.U) : true
+        starts_finite = if is_root(backend)
+            !any(cache.chunk_failed) && all(u -> all(isfinite, u), cache.U)
+        else
+            true
+        end
         starts_finite = sync_converged(backend, starts_finite)
         if !starts_finite
             diag.status = :nonfinite
@@ -143,16 +144,16 @@ function parareal!(
         fine_map!(backend, cache, solution, problem, parareal, k; saveiterates, directory)
         k_final = k
         diag.fine_batches += 1
-        diag.fine_chunk_calls += N-k+1
+        diag.fine_chunk_calls += N - k + 1
         # Root needs current terminal outputs for the secant updater and saved histories.
         if (record_interfaces || needs_fine_history(weights.rule)) && backend isa MPIBackend
             collect_chunks!(backend, solution, cache; saveiterates=false)
         end
         local_finite = if backend isa MPIBackend
-            n = MPI.Comm_rank(MPI.COMM_WORLD)+1
+            n = MPI.Comm_rank(MPI.COMM_WORLD) + 1
             n > N || (!cache.chunk_failed[n] && all(isfinite, solution.lastiterate[n].u[end]))
         else
-            !any(cache.chunk_failed) && all(n->all(isfinite, solution.lastiterate[n].u[end]), 1:N)
+            !any(cache.chunk_failed) && all(n -> all(isfinite, solution.lastiterate[n].u[end]), 1:N)
         end
         finite =
             backend isa MPIBackend ? MPI.Allreduce(local_finite, &, MPI.COMM_WORLD) : local_finite
@@ -193,7 +194,7 @@ function parareal!(
             end
             correct!(cache, parareal, k; mpi=backend isa MPIBackend)
             diag.sweeps += 1
-            diag.coarse_chunk_calls += N-k-1
+            diag.coarse_chunk_calls += N - k - 1
         end
     end
     if is_root(backend)

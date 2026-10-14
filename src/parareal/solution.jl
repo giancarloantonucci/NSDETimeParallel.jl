@@ -1,5 +1,3 @@
-# src/parareal/solution.jl
-
 "Run accounting. Bulk-synchronous counts are unavailable (`nothing`) for a pipeline."
 mutable struct PararealDiagnostics{V,T<:Real,E<:AbstractVector}
     sweeps::Union{Nothing,Int}

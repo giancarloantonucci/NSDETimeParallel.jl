@@ -1,5 +1,3 @@
-# src/parareal/backends.jl
-
 """
     AbstractPararealBackend
 

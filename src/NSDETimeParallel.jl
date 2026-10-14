@@ -1,5 +1,3 @@
-# src/NSDETimeParallel.jl
-
 module NSDETimeParallel
 
 using Distributed

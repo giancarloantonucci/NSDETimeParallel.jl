@@ -1,5 +1,3 @@
-# src/plots_recipes.jl
-
 @recipe function f(iterate::PararealIterate)
     N = length(iterate)
     for n in 1:N

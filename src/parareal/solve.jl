@@ -1,5 +1,3 @@
-# src/parareal/solve.jl
-
 """
     NSDEBase.initialize_cache(problem, parareal::Parareal) :: PararealCache
 

@@ -1,5 +1,3 @@
-# src/utils.jl
-
 function check_cost_inputs(N::Integer, ζ::Real)
     N >= 1 && isfinite(ζ) && ζ >= 0 ||
         throw(ArgumentError("cost model needs N ≥ 1 and a finite ζ ≥ 0"))
@@ -26,7 +24,7 @@ end
     theoretical_speedup(diagnostics::PararealDiagnostics, ζ::Real; estimate=:wallclock) :: Real
     theoretical_speedup(solution::PararealSolution, ζ::Real; estimate=:wallclock) :: Real
 
-Modelled speed-up over N serial fine chunks. `K` is the number of FINE BATCHES,
+returns the modelled speed-up over N serial fine chunks. `K` is the number of fine batches,
 not corrections: a finite bulk return has `s = K-1`, with `1 ≤ K ≤ N`.
 The cost ratio `ζ` is coarse/fine time per chunk; see [`costratio`](@ref).
 
@@ -45,8 +43,7 @@ batch. The diagnostics overload uses the recorded call counts directly.
 These are cost models, not measured speed-ups or unconditional performance
 bounds. The compatibility keyword `wallclock=false` selects `:work`, while an
 explicit `estimate` takes precedence. Pipeline diagnostics, nonfinite or unstarted
-runs, and runs with no fine batch are refused. A pipeline needs its task schedule;
-the old `:aubanel` formula is no longer offered as a model of native execution.
+runs, and runs with no fine batch are refused: a pipeline needs its task schedule.
 """
 function theoretical_speedup(
     K::Integer,
@@ -98,14 +95,13 @@ end
 """
     iteration_budget(S::Real, N::Integer, ζ::Real; estimate=:wallclock) :: Int
 
-Largest FINE-BATCH budget `K ∈ 1:N` that reaches target modelled speed-up S;
+returns the largest fine-batch budget `K ∈ 1:N` that reaches the target modelled speed-up `S`;
 returns zero if none does. A returned K permits K-1 corrections. This is a cost
 budget, not a prediction that the iteration converges within that budget.
 
-Integer bisection inverts [`theoretical_speedup`](@ref) with the SAME cost model
+Integer bisection inverts [`theoretical_speedup`](@ref) with the same cost model
 and exact-prefix coarse count. Both `:wallclock` (default) and `:work` are
-supported. The older names `:naive` and `:improved` remain aliases for these two
-models, respectively; they now use the corrected counts too.
+supported; `:naive` and `:improved` are aliases for them, respectively.
 """
 function iteration_budget(S::Real, N::Integer, ζ::Real; estimate::Symbol=:wallclock)
     check_cost_inputs(N, ζ)
@@ -177,8 +173,8 @@ function costratio(
     @↓ u0, (t0, tN) ← tspan = problem
     N = parareal.parameters.N
     chunk = remake(problem; u0, tspan=(t0, t0 + (tN - t0) / N))
-    finesolver = chunk_solver(finesolver, (tN-t0)/N)
-    coarsesolver = chunk_solver(coarsesolver, (tN-t0)/N)
+    finesolver = chunk_solver(finesolver, (tN - t0) / N)
+    coarsesolver = chunk_solver(coarsesolver, (tN - t0) / N)
     fcache = initialize_cache(chunk, finesolver)
     gcache = initialize_cache(chunk, coarsesolver)
     fsolution = initialize_solution(chunk, finesolver)

@@ -1,5 +1,3 @@
-# src/solve.jl
-
 """
     solve!(solution::AbstractTimeParallelSolution, problem, solver::AbstractTimeParallelSolver; kwargs...) :: AbstractTimeParallelSolution
 

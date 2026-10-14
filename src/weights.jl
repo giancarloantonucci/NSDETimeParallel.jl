@@ -43,11 +43,11 @@ function update_weight!(state::WeightState{<:NeighbourWeight}, cache, solution, 
     U, F, T = cache.U, cache.F, cache.T
     candidate = state.w
     for i in 2:(length(U) - 1)
-        den = norm(U[i]-U[i - 1])
-        den > eps(typeof(den))*max(norm(U[i]), norm(U[i - 1])) || continue
-        ratio = norm(F[i + 1]-F[i])/den
-        measured = ratio^(1/(T[i + 1]-T[i])) / state.rule.δ
-        isfinite(measured) && (candidate=max(candidate, measured))
+        den = norm(U[i] - U[i - 1])
+        den > eps(typeof(den)) * max(norm(U[i]), norm(U[i - 1])) || continue
+        ratio = norm(F[i + 1] - F[i]) / den
+        measured = ratio^(1 / (T[i + 1] - T[i])) / state.rule.δ
+        isfinite(measured) && (candidate = max(candidate, measured))
     end
     state.w = candidate
     return state

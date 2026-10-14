@@ -1,5 +1,3 @@
-# src/parareal/cache.jl
-
 """
     PararealCache <: AbstractTimeParallelCache
 
@@ -7,8 +5,9 @@ Pre-allocated state for one [`Parareal`](@ref) run: the chunk boundary values
 `U`, the fine and coarse boundary results `F` and `G`, the previous-iterate
 snapshot `U_` for the error function, the chunk time grid `T`, the chunk
 problems (built once, their `u0` slots referencing `U` so the correction
-updates them in place), and reusable solver caches. Method-dependent fields can be replaced when
-switching solver, RHS, or weight-rule types; the state shape and chunk count stay fixed.
+updates them in place), and reusable solver caches. Method-dependent fields can
+be replaced when switching solver, RHS, or weight-rule types; the state shape
+and chunk count stay fixed.
 Each run refreshes the initial state from the supplied problem. Moving a cache
 to a different span requires `shiftwindow!`. RHS changes rebuild the chunk caches;
 do not mutate RHS internals in place while retaining their solver caches.
@@ -40,7 +39,7 @@ end
 function PararealCache(
     problem::AbstractInitialValueProblem,
     parareal::Parareal;
-    duration=(problem.tspan[2]-problem.tspan[1])/parareal.parameters.N,
+    duration=(problem.tspan[2] - problem.tspan[1]) / parareal.parameters.N,
 )
     @↓ u0, (t0, tN) ← tspan = problem
     @↓ finesolver, coarsesolver = parareal
@@ -124,7 +123,11 @@ function shiftwindow!(cache::PararealCache, τ0::Real, τN::Real; duration=cache
     return cache
 end
 
-"Rebuild chunk schedules and solver caches after a change of window or method."
+"""
+    prepare_chunks!(cache::PararealCache, parareal::Parareal)
+
+rebuilds the chunk schedules and solver caches after a change of window or method.
+"""
 function prepare_chunks!(cache::PararealCache, parareal::Parareal)
     parareal.parameters.N == length(cache.U) ||
         throw(DimensionMismatch("cache chunk count differs; build a new cache when changing N"))
@@ -142,7 +145,12 @@ function prepare_chunks!(cache::PararealCache, parareal::Parareal)
     return cache
 end
 
-"Serial fine reference on exactly the same absolute-time chunk grid and schedule."
+"""
+    reference(problem, parareal::Parareal) :: Vector
+
+returns the serial fine solution at the `N + 1` chunk interfaces, computed on
+exactly the same absolute-time chunk grid and schedule as `parareal`.
+"""
 function reference(problem::AbstractInitialValueProblem, parareal::Parareal)
     N = parareal.parameters.N
     t0, tN = problem.tspan
@@ -157,7 +165,13 @@ function reference(problem::AbstractInitialValueProblem, parareal::Parareal)
     return values
 end
 
-"Read a true endpoint, retaining interpolation only for generic solvers that overshoot."
+"""
+    chunk_endpoint(sol, t)
+
+returns the value of `sol` at the chunk endpoint `t`: the stored final value when
+the solver stopped exactly at `t`, otherwise the interpolant (for generic solvers
+that overshoot).
+"""
 chunk_endpoint(sol, t) = sol.t[end] == t ? sol.u[end] : sol(t)
 
 # Construction and window shifts share the same nominal-duration contract.
@@ -166,12 +180,17 @@ function validate_duration(t0, tN, N, duration)
         throw(ArgumentError("time span must be finite and increasing"))
     isfinite(duration) && duration > 0 ||
         throw(ArgumentError("chunk duration must be finite and positive"))
-    abs((tN-t0)-N*duration) <= 32eps(max(abs(float(t0)), abs(float(tN)), N*duration)) ||
+    abs((tN - t0) - N * duration) <= 32eps(max(abs(float(t0)), abs(float(tN)), N * duration)) ||
         throw(ArgumentError("window span differs from N times the nominal chunk duration"))
     return nothing
 end
 
-"Refresh initial data and RHS caches; moving the time grid requires shiftwindow!."
+"""
+    prepare_problem!(cache::PararealCache, problem, parareal)
+
+refreshes the initial data and RHS caches from `problem`; moving the time grid
+needs [`shiftwindow!`](@ref).
+"""
 function prepare_problem!(cache::PararealCache, problem, parareal)
     parareal.parameters.N == length(cache.U) ||
         throw(DimensionMismatch("cache chunk count differs; build a new cache when changing N"))

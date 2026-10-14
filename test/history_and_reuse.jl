@@ -1,12 +1,12 @@
 @testset "cache and solution reuse" begin
-    # make_parareal's default ϵ converges before K, so `errors` gets resized
-    # down — a second run on the same solution used to throw BoundsError.
+    # make_parareal's default ϵ converges before K, so `errors` is resized down;
+    # a second run on the same solution must grow it back.
     parareal = make_parareal(N=5)
     fresh = solve(problem, parareal)
     cache = initialize_cache(problem, parareal)
     reused = initialize_solution(problem, parareal)
     parareal(cache, reused, problem)
-    parareal(cache, reused, problem)   # the regression: reuse after down-resize
+    parareal(cache, reused, problem)   # reuse after the down-resize
     @test reused.errors == fresh.errors # bitwise, run-to-run and vs fresh
     for n in 1:5
         @test reused[n].u == fresh[n].u
