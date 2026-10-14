@@ -1,5 +1,16 @@
 [deps]
+Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+NSDERungeKutta = "3978d399-9848-4322-9a48-ca26b732c7dc"
+NSDETimeParallel = "589f7035-6b7a-40e5-abe3-32909204d25a"
 
 [compat]
+Distributed = "1"
 Documenter = "1"
+LinearAlgebra = "1"
+MPI = "0.20"
+NSDERungeKutta = "0.3"
+NSDETimeParallel = "0.3"
+julia = "1.10"

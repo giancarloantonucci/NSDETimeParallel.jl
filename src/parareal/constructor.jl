@@ -1,44 +1,36 @@
-# src/parareal/constructor.jl
-
-"""
-    Parareal <: AbstractTimeParallelSolver
-
-A composite type for the Parareal algorithm.
-
-# Constructors
-```julia
-Parareal(finesolver, coarsesolver, parameters, tolerance)
-Parareal(finesolver, coarsesolver; parameters=PararealParameters(), tolerance=Tolerance())
-```
-
-## Arguments
-- `finesolver :: AbstractInitialValueSolver` : fine solver (accurate but expensive).
-- `coarsesolver :: AbstractInitialValueSolver` : coarse solver (rough but quick).
-- `parameters :: AbstractPararealParameters` : parameters for the correction step.
-- `tolerance :: AbstractTolerance` : tolerance and error mechanism.
-
-# Methods
-
-    (parareal::Parareal)(solution::PararealSolution, problem::AbstractInitialValueProblem)
-    (parareal::Parareal)(problem::AbstractInitialValueProblem)
-
-returns the `solution` of a `problem` using `parareal`.
-"""
+"Immutable Parareal settings. Per-run propagation plans and weights live in the cache."
 struct Parareal{
-            finesolver_T<:AbstractInitialValueSolver,
-            coarsolver_T<:AbstractInitialValueSolver,
-            parameters_T<:AbstractPararealParameters,
-            tolerance_T<:AbstractTolerance,
-        } <: AbstractTimeParallelSolver
-    finesolver::finesolver_T
-    coarsesolver::coarsolver_T
-    parameters::parameters_T
-    tolerance::tolerance_T
+    F<:AbstractInitialValueSolver,
+    G<:AbstractInitialValueSolver,
+    P<:AbstractTimeParallelParameters,
+    C<:AbstractCriterion,
+} <: AbstractTimeParallelSolver
+    finesolver::F
+    coarsesolver::G
+    parameters::P
+    criterion::C
 end
-
-Parareal(
-    finesolver::AbstractInitialValueSolver,
-    coarsesolver::AbstractInitialValueSolver;
-    parameters::AbstractPararealParameters=PararealParameters(),
-    tolerance::AbstractTolerance=Tolerance(),
-) = Parareal(finesolver, coarsesolver, parameters, tolerance)
+function Parareal(
+    f::AbstractInitialValueSolver,
+    g::AbstractInitialValueSolver;
+    N::Integer=10,
+    K::Integer=N,
+    parameters=nothing,
+    criterion::AbstractCriterion=RelativeUpdate(),
+)
+    p = parameters === nothing ? PararealParameters(; N, K) : parameters
+    return Parareal(f, g, p, criterion)
+end
+"Build changed Parareal settings without changing the original."
+function NSDEBase.remake(
+    p::Parareal;
+    finesolver=p.finesolver,
+    coarsesolver=p.coarsesolver,
+    criterion=p.criterion,
+    N=p.parameters.N,
+    K=(p.parameters.K == p.parameters.N ? N : p.parameters.K),
+)
+    parameters =
+        N == p.parameters.N && K == p.parameters.K ? p.parameters : PararealParameters(N, K)
+    return Parareal(finesolver, coarsesolver; parameters, criterion)
+end

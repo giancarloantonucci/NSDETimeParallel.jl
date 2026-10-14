@@ -17,9 +17,3 @@ abstract type AbstractTimeParallelParameters <: AbstractInitialValueParameters e
 
 "An abstract type for parameters of [`Parareal`](@ref)s."
 abstract type AbstractPararealParameters <: AbstractTimeParallelParameters end
-
-"An abstract type for tolerance parameters in [`AbstractTimeParallelSolver`](@ref)s."
-abstract type AbstractTolerance <: AbstractTimeParallelParameters end
-
-"An abstract type for proximity-function weights used by [`AbstractTimeParallelSolver`](@ref)s."
-abstract type AbstractWeights <: AbstractTimeParallelParameters end

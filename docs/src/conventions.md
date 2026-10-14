@@ -1,59 +1,100 @@
-# Conventions
+# Representation and accounting
 
-Every rule on this page exists because its violation produced a real bug in this ecosystem's history; this is the page to read before touching weights, criteria, or boundaries.
+## Starts, outputs, and reference
 
-## The weight convention (read this one twice)
+Parareal stores `N` chunk starts. Each returned chunk is a fine solve from its
+stored start; the final time value comes from the last chunk. `boundaryvalues`
+returns the starts plus that terminal output. `seams` measures jumps between a
+chunk's fine output and the next stored start.
 
-There are two natural bases for the exponential weights, and both live in this ecosystem. Confusing them has caused three independent bugs, which is why this box exists.
+The chunk span is `(tN-t0)/N`. NSDERungeKutta prepares one nominal schedule:
+full steps plus a shortened last step when necessary. All translated chunks use
+that schedule. Moving windows pass their nominal duration explicitly when resizing;
+translation alone does not rebuild caches. Chunk output is read from `u[end]`; generic non-NSDE solver adapters
+retain interpolation only if their returned trajectory overshoots the boundary.
 
-!!! warning "Per-time vs per-chunk"
-    **`Weights.w` is a per-*time* base**: `w = exp(λ)` with λ the amplification rate per unit time. The proximity function applies it through time exponents, `w^(T₁ − Tₙ)`, so the discount a boundary receives is `exp(-λ · elapsed time)` regardless of how time is chunked. The thesis's per-*chunk* base is `w^ΔT = exp(λΔT)`; the two coincide **only when the chunk length is 1**.
+`reference(problem, parareal)` applies the fine solver serially on this same grid.
+For deterministic finite solves, exact completion reproduces these interface values
+bitwise. The correction forms `F + (Gnew-Gold)` and directly assigns the newly exact
+start. The guarantee concerns the discrete reference, not the exact ODE trajectory.
 
-    - `Weights(w = exp(λ))`, and the rate measured by `Weights(updatew = true)`, are per-time.
-    - [`Wnorm`](@ref) takes the **per-chunk** base (its exponents are chunk indices, matching the thesis's `Wₙ = w⁻ⁿ`); its docstring carries the same warning.
-    - Weights are anchored at the **window start** (`T₁`), never at absolute `t = 0`: a window beginning at `t₀ ≠ 0` must not change any discount.
+## Histories and reusable configuration
 
-If you are porting a script older than this page: `exp(2^(1/29)·ΔT)` and friends are pre-convention hacks; the ecosystem-wide Lorenz value is `exp(0.9056)` per unit time.
+`history=:none` is the default. `:interfaces` saves boundary vectors for each
+batch in `diagnostics.interfaces`; `:iterates` saves full chunk trajectories in
+`solution.iterates`. Residual and weight histories are always in diagnostics.
+`errors` aliases the residuals in diagnostics. Use `history` to choose stored output.
 
-## What the two criteria actually accept
+`Parareal`, its parameters, criterion, and weight rules are immutable configurations.
+Cached states and solver workspaces belong to a run. `remake(parareal; criterion=...,
+finesolver=..., coarsesolver=..., N=..., K=...)` changes selected settings.
+A cache can switch weight-rule and fine/coarse solver types, including fixed and
+adaptive RK solvers; method-dependent storage is rebuilt when needed. The chunk
+count and state type/shape must stay fixed. Rebuild the cache when those change,
+and create a new solution buffer if the new solver uses a different output type. Running a solver does not mutate its settings.
 
-`ψ₁` compares successive iterates; `ψ₂` compares chunk starts against the fine values they should equal, discounted by the weights. They do not merely differ in speed — they accept **different objects**, and at the wrong chunk length each is degenerate in its own way. (For *choosing* between them, and for getting the weight, see the [criterion](criterion.md) page; this section is about what the choice commits you to.)
+## Counts and status
 
-!!! note "The two-pole degeneracy"
-    With chunks much longer than one Lyapunov time of the dynamics:
+For bulk execution, `K` limits fine batches. Every finite return has
+`fine_batches=sweeps+1`, for both relative-update and weighted-defect criteria.
+Exact completion uses `N` batches and `N-1` corrections. The final batch evaluates
+the starts that are actually returned; no untested final correction is made.
 
-    - under **`ψ₁`** no meaningful contraction happens until finite termination sweeps through, so runs "converge" at `K ≈ N` — at which point the result *is* the chunked fine solve, computed at roughly `N/2` sweeps of work per solve. You have paid a large multiple of the serial cost to reproduce the serial answer.
-    - under **`ψ₂`** the discount `exp(-λ(Tₙ - T₁))` annihilates late boundaries, so runs accept at `K ≈ 1–2` with O(1) discontinuities at late chunk seams: the result is a **pseudo-orbit**, statistically useful for chaotic problems, pointwise wrong.
+Diagnostics record actual fine/coarse chunk calls after exact-prefix reuse.
+Statuses are `:converged`, `:exact`, `:budget_exhausted`, and `:nonfinite`.
+A numerical `SolverFailure` (including `NewtonFailure` or `StepFailure` from
+exhausted adaptive retries) is logged with its time span and backtrace, and the
+failed chunk is replaced by NaNs. All backends finish with `:nonfinite`.
+Other exceptions, including programming and configuration errors, propagate on
+serial, threaded and distributed backends (possibly wrapped by the backend).
+Under MPI, all ordinary chunk exceptions become logged `:nonfinite` returns so
+peers can finish their communication instead of hanging. This covers the coarse
+initial pass and corrections as well as fine solves. Standalone Runge–Kutta
+solves still throw numerical failures. Interrupts, stack overflow and out-of-memory
+failures are rethrown; an active multi-rank MPI backend aborts for these fatal
+failures. Nonfinite results can
+terminate partway through a computation, so the finite-return count identity
+should not be used to reconstruct their work. If the coarse pass fails before
+any fine batch, the residual and measured-weight histories are empty. Unsolved
+chunk trajectories carry NaNs on their proper time spans, so interpolation and
+`boundaryvalues` cannot expose uninitialised or stale output. If a correction
+fails, only the already exact prefix is retained.
 
-    The regime in which the criteria mean something is chunks of roughly **one Lyapunov time or less**: `K` small but plural, seams present but bounded.
+Pipelined runs have no global batches: `sweeps` and `fine_batches` are `nothing`.
+Use `local_sweeps` and the actual total call counts instead.
 
-Two consequences you should design around rather than discover:
+## Work models
 
-- **`ψ₂`'s tail is unconstrained by design.** The discount forgives late boundaries; do not assume they are small — *measure* them with [`seams`](@ref) / [`maxseam`](@ref), and report them next to any statistical claim.
-- **Finite termination is exact — in floating point too.** After `k` corrections the first `k` boundary starts are exact, so at `K = N` the result is the chunked fine solve. Two implementation details make that hold bit for bit rather than "up to roundoff": the correction is evaluated as `F + (Gnew − Gold)`, which returns `F` exactly when the coarse values cancel exactly (the other association, `(Gnew + F) − Gold`, rounds `F` into `Gnew` first and loses low bits — an earlier version did that, and the suite carried a `< 1e-13` seam bound with a comment blaming floating point), and the newly exact interface is *assigned* from the fine output instead of recomputed. A fixed-step chunk solve whose step divides the chunk ends on the chunk boundary bit for bit (the last scheduled step is placed on `tN`; see `NSDERungeKutta.fixedstep_count`), so the boundary lookup returns the final node rather than interpolating across a one-ulp overshoot. The suite asserts `maxseam == 0.0` at `ϵ = 0, K = N`. Backends agree bitwise with each other as before. [`contractionrate`](@ref) still excludes zeros and non-finite entries: an exact zero at the fixed point is a property of termination, not a rate.
+`theoretical_speedup(K, N, ζ)` takes **fine batches** K. A finite bulk return has
+s=K−1 corrections. With the exact-prefix optimization, the coarse call count is
+`K_G=K*(N-1)-K*(K-1)/2`. The default `estimate=:wallclock` gives
+`N/(K+ζ*K_G)`, charging one fine-chunk time per batch and all sequential coarse
+calls. It assumes enough workers and equal chunk costs, and excludes communication,
+synchronization, and load imbalance; it is not an unconditional timing ceiling.
 
-## Boundary ownership: `flatten`
+For a measured finite run, prefer:
 
-Adjacent chunks share a boundary instant with two values at it: chunk `n`'s **fine endpoint** and chunk `n + 1`'s **corrected start** (they differ by exactly the seam). [`flatten`](@ref) keeps the **fine-endpoint side** — chunk 1 in full, then `u[2:end]` of every later chunk, so the dropped value is each later chunk's corrected start — producing one point per time on the fine grid. If you concatenate chunks by hand you will either duplicate boundaries or make the opposite ownership choice silently; the historical `collapse` helpers did both *in the same script*. Use `flatten`, and audit what it hid with [`seams`](@ref).
+```julia
+ζ = costratio(problem, parareal)
+S = theoretical_speedup(solution.diagnostics, ζ)
+# Equivalently: theoretical_speedup(solution, ζ)
+K = iteration_budget(2.0, numchunks(solution), ζ)
+```
 
-## Measure, don't guess
+The diagnostics form uses recorded calls directly, including those from a
+zero-correction acceptance or exact completion. `iteration_budget` returns the
+largest fine-batch budget meeting the requested modelled speed-up; its correction
+budget is K−1, and K=0 means that the speed-up target is infeasible. The helper
+says nothing about whether that budget is sufficient for convergence.
 
-Every quantity the cost and tracking formulas consume has a measuring function; stage-count arithmetic and step-ratio guesses are how the old figures went wrong.
+`estimate=:work` divides the actual fine-call count by N instead of charging a
+whole batch. It assumes perfect redistribution of the shrinking workload, which
+the bulk backend does not provide. Use the same model for both helpers. The old
+budget names `:naive` and `:improved` alias `:wallclock` and `:work`, now with the
+corrected coarse counts. The speed-up helper also retains `wallclock=false` as
+an explicit spelling of `:work`.
 
-| Quantity | Meaning | Measure with |
-|---|---|---|
-| ζ | coarse/fine cost ratio per chunk | [`costratio`](@ref) |
-| β | per-iteration error contraction | [`contractionrate`](@ref) |
-| S | predicted speedup at K iterations | [`theoretical_speedup`](@ref) |
-| K̂ | largest K meeting a speedup target | [`iteration_budget`](@ref) |
-| seams | what was actually accepted | [`seams`](@ref), [`maxseam`](@ref) |
-
-Match the ceiling to the measurement: [`theoretical_speedup`](@ref)'s default is the *work-credited* bound (the shrinking `k:N` sweeps are saved **work**); a wall-clock benchmark with a full worker pool does **not** collect that credit — a parallel sweep costs one chunk-time however few chunks remain — so judge timings against `estimate = :wallclock`, and judge the pipelined backend against `estimate = :aubanel`. Judging a measurement against the wrong ceiling flatters or slanders it; the [backends](backends.md) page spells out which is which.
-
-## Execution modes
-
-The primitive-based backends change wall time only: results are bitwise identical across `SERIAL`, `THREADS`, `DISTRIBUTED` and `MPI`, and the test suite enforces it. `PipelinedMPIBackend` is the documented exception — the same fixed point reached under frontier convergence semantics. Operational guidance (which backend, when, and the traps) lives on the [backends](backends.md) page.
-
-## Plotting
-
-Plotting goes through Plots (RecipesBase); attributes are `variables`, `iscomplex` and `skip`. Parallel and windowed solutions draw chunk-by-chunk and window-by-window — seams and overlaps are shown, not hidden, per this page's second section.
+Nonfinite, unstarted, and pipelined diagnostics are refused. Pipeline calls do not
+have a global batch count, and total calls alone cannot give their critical path.
+The old `:aubanel` expression has been removed from this helper rather than
+presented as a bound for the native pipeline.

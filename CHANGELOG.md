@@ -1,8 +1,36 @@
 # Changelog
 
+## 0.3.0 development revision (unreleased)
+
+- Convert only SolverFailure to nonfinite on non-MPI backends; programming errors propagate. MPI still catches ordinary chunk exceptions to complete communication.
+- Convert fine and coarse chunk-solve exceptions to logged NaN chunks and `:nonfinite` on every backend, retaining MPI message matching. Add multi-rank failure regressions.
+- Plot positive finite residuals on a logarithmic scale and label the first chunk consistently. Update missing-field tests for newer Julia versions.
+- Trim MPI residual histories before broadcasting and restore shared error/residual storage on every rank. Add concrete chunk-kernel dispatch and document pipeline overlap-seeding limitations.
+- Refresh the initial state on cache reuse and rebuild RHS-dependent chunk caches when the problem RHS changes. Reject mismatched spans and state layouts. Validate initial nominal chunk durations and MPI rank counts.
+- Keep nonfinite batch weights aligned with residuals; allow the `wallclock` keyword on all cost-helper overloads. Let the default full budget follow `N` in `remake`.
+- Remove duplicated runtime dependencies from test extras.
+- Cost helpers now count fine batches and exact-prefix coarse calls. The default
+  model is `:wallclock`; solution/diagnostics overloads use recorded calls.
+  `iteration_budget` inverts the same model. The unsupported native-pipeline
+  comparison `:aubanel` is removed.
+- Mark unsolved nonfinite output as NaN. Support cache reuse across weight-rule and solver types. Let Wnorm use measured solution weights and reject adaptive rule settings. Preserve unchanged parameters in remake. Test the RelativeUpdate path through shared fixtures.
+- Nominal chunk durations persist across shifted windows. Distributed endpoints and
+  cost measurements use prepared chunk solvers. Restored multi-threaded CI.
+- Typed criteria and weight rules, `RelativeUpdate()` default, automatic chunk plans, and a serial chunked `reference`. Immutable configuration and cache-local current weights reset on each run. Added unified `history`, typed diagnostics with residuals, and pipeline call/status accounting. Unsupported pipeline criteria now error. `Wnorm` takes a per-time base. Removed legacy tolerance/weight adapters and keywords; MPI remains a hard dependency.
+- All Julia sources, tests, and examples follow the repository JuliaFormatter configuration. Historical implementation notes have been removed from current API descriptions.
+
+## 0.2.2 development snapshot
+
+- Added all-interface mixed relative-update stopping, same-chunk secant
+  weights, fixed chunk schedules, and sweep/fine-batch/status diagnostics for
+  weighted-defect runs. These interfaces are superseded by the typed
+  criteria and automatic schedules in 0.3.0.
+- This entry records the development snapshot; it does not claim a release tag.
+
 ## 0.2.1
 
 ### Fixed
+
 - Standard-library compatibility bounds admit the unversioned stdlibs used in
   Julia 1.6 test environments.
 - The MPI CI environment explicitly installs NSDERungeKutta 0.2, required by
@@ -10,6 +38,7 @@
   when that test file is run directly.
 
 ### Tests and maintenance
+
 - Re-enable Aqua's persistent-task check following package registration.
 - Refresh workflow comments to describe registered dependencies.
 
@@ -18,8 +47,9 @@
 Requires NSDEBase 0.3.1 and NSDERungeKutta 0.2 (test dependency).
 
 ### Fixed
+
 - `Wnorm` used the exponent `Ts[n]/(Ts[n−1] − Ts[n])`; it now computes the
-  thesis weight `w^{-j}` with `j` window-relative.
+  trajectory weight `w^{-j}` with `j` window-relative.
 - `ψ₁` divided by a zero norm and snapshotted the previous iterate with `.=`,
   aliasing the inner arrays.
 - Parareal correction evaluates `F + (Gnew − Gold)` and assigns the interface
@@ -32,6 +62,7 @@ Requires NSDEBase 0.3.1 and NSDERungeKutta 0.2 (test dependency).
 - `PararealParameters` validates `N, K ≥ 1` and warns on `K > N`.
 
 ### Changed (breaking)
+
 - Backends: `SerialBackend`, `ThreadsBackend`, `DistributedBackend`,
   `MPIBackend`, `PipelinedMPIBackend` share one `parareal!`; the `mode=`
   strings still work. The per-mode source files are gone.
@@ -48,6 +79,7 @@ Requires NSDEBase 0.3.1 and NSDERungeKutta 0.2 (test dependency).
   static on 1.6–1.7.
 
 ### Added
+
 - `ψ∞`; `boundarytimes`, `boundaryvalues`, `flatten`, `seams`, `maxseam`;
   `theoretical_speedup`, `costratio`, `iteration_budget`, `contractionrate`;
   `NSDEBase.initialize_cache`/`initialize_solution` for `Parareal`.
@@ -56,7 +88,6 @@ Requires NSDEBase 0.3.1 and NSDERungeKutta 0.2 (test dependency).
   test suite.
 
 ### Migration
+
 - `collect!(solution)` → `collect_iterates!(solution; directory)`.
 - `Weights(w=[...])` → a single scalar base.
-
-

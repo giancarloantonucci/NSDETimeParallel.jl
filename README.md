@@ -1,59 +1,70 @@
 # NSDETimeParallel.jl
 
-A Julia package implementing time-parallel methods.
+Parareal with explicit stopping targets, chunk schedules, and work diagnostics.
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://giancarloantonucci.github.io/NSDETimeParallel.jl/stable) [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://giancarloantonucci.github.io/NSDETimeParallel.jl/dev) ![Build Status](https://img.shields.io/github/actions/workflow/status/giancarloantonucci/NSDETimeParallel.jl/CI.yml) ![Coverage Status](https://img.shields.io/codecov/c/github/giancarloantonucci/NSDETimeParallel.jl)
 
-## Installation
 
-NSDETimeParallel is a [registered package](https://juliahub.com/ui/Search?q=NSDETimeParallel&type=packages) compatible with Julia v1.6 and above. From the Julia REPL,
-
-```
-]add NSDETimeParallel
-```
-
-Read the [documentation](https://giancarloantonucci.github.io/NSDETimeParallel.jl/dev) for a complete overview of this package.
-
-## Usage
+## Start here
 
 ```julia
 using NSDERungeKutta, NSDETimeParallel
-using Plots, LaTeXStrings
-
-u0 = [2.0, 3.0, -14.0]
-problem = Lorenz(u0, 0.0, 10.0)
-parareal = Parareal(RK4(h = 1e-3), RK4(h = 1e-1);
-                    parameters = PararealParameters(N = 10),
-                    tolerance = Tolerance(ϵ = 1e-8))
-solution = solve(problem, parareal)
-plot(solution, xlabel = L"t", label = [L"x" L"y" L"z"])
+problem = Logistic(0.3, (0.0, 2.0))
+par = Parareal(RK4(h=0.005), RK4(h=0.05); N=4)
+result = solve(problem, par; backend=ThreadsBackend())
+@assert result.diagnostics.status in (:converged, :exact)
+result.diagnostics.fine_batches
 ```
 
-![svg](imgs/lorenz.svg)
+Start Julia with `--threads=4` for this example; `SerialBackend()` is the default.
+Parareal constructs the fine/coarse chunk schedules itself. The default
+`RelativeUpdate()` requires every stored start to pass a mixed absolute/relative
+update test. `WeightedDefect` deliberately changes the acceptance target.
 
-`solution.errors` holds the error per Parareal iteration; `solution.lastiterate` holds the fine chunk solutions.
+For deterministic finite bulk solves, `NoStop()` with `K=N` reaches the matching
+chunked fine reference in `N` fine batches and `N-1` corrections. This is discrete
+exactness, not exactness relative to the ODE. Use `reference(problem, par)` to
+check it. Read status before interpreting residuals or speed-up estimates.
 
-Choosing between the error functions ψ₁ and ψ₂ — and picking the weight `w` for the latter — decides what "converged" means and what it costs; see the *Choosing the convergence criterion* page of the docs before running long chaotic spans.
+- [Criteria and weights](docs/src/criterion.md): per-unit-time weights and tail limits.
+- [Conventions](docs/src/conventions.md): histories, counts, reuse, failures, and cost models.
+- [Backends](docs/src/backends.md): serial, threads, Distributed, and MPI.
+- [Extensions](docs/src/extensions.md): a complete criterion and solver wrapper.
+- [Quick reference](docs/src/quick_reference.md): glossary and common calls.
 
-## Execution backends
+MPI remains a required dependency. Pipelined MPI has a distinct frontier protocol:
+it has no global batch count and supports only a subset of criteria.
 
-The Parareal algorithm is written once; four interchangeable backends run its fine sweep, and a fifth is a documented semantic variant. Pick one with `mode` or `backend`:
+## Learn by running
 
-```julia
-solution = solve(problem, parareal)                        # SerialBackend (default)
-solution = solve(problem, parareal; mode = "THREADS")      # or backend = ThreadsBackend()
+The [guided tour](docs/src/guide.md) explains each step. Its companion
+[`examples/guided_tour.jl`](examples/guided_tour.jl) runs the numerical examples
+with assertions. Run it in a project containing this package and its example
+dependencies; use Julia 1.10 or later.
+
+The ecosystem is NSDEBase → NSDERungeKutta → NSDETimeParallel → NSDEMovingWindow.
+ArrowMacros provides supporting macros; they are not required in user examples.
+
+## Installation and versions
+
+For a registered release, use `Pkg.add("NSDETimeParallel")`. These docs describe the
+current development API; a registered version may differ. To use a local
+checkout, activate your working environment and `Pkg.develop(path="/path/to/NSDETimeParallel")`.
+Develop matching local dependency checkouts in that environment too, then check
+`Pkg.status()`. The serial and parallel guides also require NSDERungeKutta;
+plotting requires Plots.
+
+See the [documentation](https://giancarloantonucci.github.io/NSDETimeParallel.jl/dev/)
+and [API reference](docs/src/api.md) for details.
+
+## Build the manual locally
+
+From the package root, with matching dependency checkouts already available:
+
+```sh
+julia --project=docs -e 'using Pkg; Pkg.develop(path="."); Pkg.instantiate()'
+julia --project=docs --threads=4 docs/make.jl
 ```
 
-- **`SerialBackend`** — everything in the calling task; the reference the other backends must agree with, bit for bit.
-- **`ThreadsBackend`** — fine chunks over `Threads.@threads` in shared memory. Start Julia with `--threads=N`.
-- **`DistributedBackend`** — fine chunks over `pmap` on the default worker pool; the result does not depend on the worker count. Load the packages on the workers first: `@everywhere using NSDETimeParallel, NSDERungeKutta`.
-- **`MPIBackend`** — SPMD, one rank per chunk, all hand-offs through memory. Needs `MPI.Init()` and `mpiexec`; see `test/mpi/` for the recipe.
-- **`PipelinedMPIBackend`** (`mode = "PIPELINED"`) — the Aubanel-scheduled SPMD variant: no root, the serial coarse chain passed rank to rank and hidden behind fine work, FRONTIER convergence (per-boundary stagnation ≤ ϵ; the global ψ is ignored, with a warning). Judge it against `theoretical_speedup(K, N, ζ; estimate = :aubanel)`, and see the Backends page of the docs for what the variant preserves and what it trades.
-
-Disk is used only for the opt-in `saveiterates` history under MPI.
-
-`theoretical_speedup(K, N, ζ)` gives Parareal's own speed-up ceiling for a measured coarse/fine cost ratio ζ; `benchmark/scaling.jl` measures ζ and judges the real speed-up against that ceiling.
-
-## Available methods
-
-This package currently supports only `Parareal`.
+Documenter executes the guided-tour examples during the build. For local
+unreleased dependencies, develop their paths into `docs` before instantiating.
+The deployment step only publishes in an appropriately configured CI environment.

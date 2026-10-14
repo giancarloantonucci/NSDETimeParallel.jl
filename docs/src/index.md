@@ -1,30 +1,37 @@
 # NSDETimeParallel.jl
 
-This is the documentation of [NSDETimeParallel.jl](https://github.com/giancarloantonucci/NSDETimeParallel.jl), a Julia package implementing time-parallel methods — the Parareal algorithm over one shared skeleton with four execution backends.
+Parareal with explicit stopping targets, chunk schedules, and work diagnostics.
 
-## Installation
-
-From the Julia REPL,
-
-```
-]add https://github.com/giancarloantonucci/NSDETimeParallel.jl
-```
-
-## Getting started
+## First example
 
 ```julia
 using NSDERungeKutta, NSDETimeParallel
-
-problem = Lorenz([2.0, 3.0, -14.0], (0.0, 10.0))
-parareal = Parareal(RK4(h = 1e-3), RK4(h = 1e-1);       # fine, coarse
-                    parameters = PararealParameters(N = 10),
-                    tolerance = Tolerance(ϵ = 1e-8))
-solution = solve(problem, parareal)
-solution.errors        # error per iteration
-solution(5.0)          # interpolate
+problem = Logistic(0.3, (0.0, 2.0))
+par = Parareal(RK4(h=0.005), RK4(h=0.05); N=4)
+result = solve(problem, par; backend=ThreadsBackend())
+@assert result.diagnostics.status in (:converged, :exact)
+result.diagnostics.fine_batches
 ```
 
-The convergence measure lives in `Tolerance`: the unweighted `ψ₁` (default) or the weighted `ψ₂` with [`Weights`](@ref) — the latter is what the zooming strategy of NSDEMovingWindow.jl acts on.
+Start with the [guided tour](guide.md), then consult:
 
-- The [Backends](backends.md) page covers the four execution modes and how to judge speed-ups.
-- The [API](api.md) holds the full reference.
+- [Criteria](criterion.md)
+- [Conventions and cost models](conventions.md)
+- [Backends](backends.md)
+- [Extensions](extensions.md)
+- [Quick reference](quick_reference.md)
+- [API](api.md)
+
+## Environment
+
+These pages describe the current development checkout (Julia 1.10 or later).
+Use compatible versions of the NSDE packages in one project. For local
+checkouts, develop each package with `Pkg.develop(path="/path/to/package")`;
+`Pkg.status()` reports what will actually load. A registered release may expose
+an older API. Plotting examples additionally need Plots.
+
+## Reference
+G. A. Antonucci (2025), *Solving chaotic ODEs with time-parallel algorithms*,
+DPhil thesis, University of Oxford. DOI: [10.5287/ora-xoevp0dez](https://doi.org/10.5287/ora-xoevp0dez).
+The thesis provides the mathematical background; the API and implementation
+conventions are specified by these package docs.

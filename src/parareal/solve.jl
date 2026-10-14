@@ -6,47 +6,81 @@
 returns a reusable [`PararealCache`](@ref) for `problem`, honouring the same
 contract NSDERungeKutta honours for its solvers. Build once, then call
 `parareal(cache, solution, problem; ...)` repeatedly — e.g. in timing loops,
-where rebuilding the cache per solve measures the allocator, not the algorithm.
+to report setup costs separately from repeated solve costs. Reuse is not a
+zero-allocation guarantee.
 """
-NSDEBase.initialize_cache(problem::AbstractInitialValueProblem, parareal::Parareal) = PararealCache(problem, parareal)
+function NSDEBase.initialize_cache(problem::AbstractInitialValueProblem, parareal::Parareal)
+    return PararealCache(problem, parareal)
+end
 
 """
-    NSDEBase.initialize_solution(problem, parareal::Parareal; saveiterates=false) :: PararealSolution
+    NSDEBase.initialize_solution(problem, parareal::Parareal; history=:none) :: PararealSolution
 
 returns a [`PararealSolution`](@ref) for `problem`. Reusable across solves.
 """
-NSDEBase.initialize_solution(problem::AbstractInitialValueProblem, parareal::Parareal; saveiterates::Bool=false) = PararealSolution(problem, parareal; saveiterates)
-
-_backend_from_mode(mode::AbstractString) =
-    uppercase(mode) == "SERIAL"      ? SerialBackend()       :
-    uppercase(mode) == "THREADS"     ? ThreadsBackend()      :
-    uppercase(mode) == "DISTRIBUTED" ? DistributedBackend()  :
-    uppercase(mode) == "MPI"         ? MPIBackend()          :
-    uppercase(mode) == "PIPELINED"   ? PipelinedMPIBackend() :
-    throw(ArgumentError("Unknown Parareal mode \"$mode\"; use \"SERIAL\", \"THREADS\", \"DISTRIBUTED\", \"MPI\" or \"PIPELINED\", or pass a backend object."))
-    # (The old dispatcher SILENTLY returned the unsolved solution on a typo.)
-
-function (parareal::Parareal)(cache::PararealCache, solution::PararealSolution, problem::AbstractInitialValueProblem;
-        mode::String="SERIAL", backend::Union{Nothing,AbstractPararealBackend}=nothing,
-        saveiterates::Bool=false, directory::Union{Nothing,String}=nothing, nocollect::Bool=false)
-    b = backend === nothing ? _backend_from_mode(mode) : backend
-    return parareal!(cache, solution, problem, parareal, b; saveiterates, directory, nocollect)
+function NSDEBase.initialize_solution(
+    problem::AbstractInitialValueProblem, parareal::Parareal; history::Symbol=:none
+)
+    return PararealSolution(problem, parareal; history=history)
 end
 
-function (parareal::Parareal)(solution::PararealSolution, problem::AbstractInitialValueProblem; kwargs...)
-    cache = PararealCache(problem, parareal)
-    parareal(cache, solution, problem; kwargs...)
-    return solution
+function history_options(history)
+    history in (:none, :interfaces, :iterates) ||
+        throw(ArgumentError("history must be :none, :interfaces, or :iterates"))
+    return (history === :iterates, history === :interfaces)
 end
-
-function (parareal::Parareal)(problem::AbstractInitialValueProblem; saveiterates::Bool=false, kwargs...)
-    solution = PararealSolution(problem, parareal; saveiterates)
-    parareal(solution, problem; saveiterates, kwargs...)
-    return solution
+function (parareal::Parareal)(
+    cache::PararealCache,
+    solution::PararealSolution,
+    problem::AbstractInitialValueProblem;
+    backend::AbstractPararealBackend=SerialBackend(),
+    history::Symbol=:none,
+    directory::Union{Nothing,String}=nothing,
+    nocollect::Bool=false,
+    initial_weight=nothing,
+)
+    prepare_problem!(cache, problem, parareal)
+    saveiterates, record_interfaces = history_options(history)
+    if saveiterates && solution.iterates === nothing
+        throw(ArgumentError("construct the solution with history=:iterates"))
+    end
+    if backend isa PipelinedMPIBackend
+        record_interfaces &&
+            throw(ArgumentError("interface histories require a bulk-synchronous backend"))
+        initial_weight !== nothing &&
+            throw(ArgumentError("configure a fixed pipeline weight on the criterion"))
+        prepare_chunks!(cache, parareal)
+        return parareal!(
+            cache, solution, problem, parareal, backend; saveiterates, directory, nocollect
+        )
+    end
+    return parareal!(
+        cache,
+        solution,
+        problem,
+        parareal,
+        backend;
+        saveiterates,
+        directory,
+        nocollect,
+        record_interfaces,
+        initial_weight,
+    )
 end
-
-function (parareal::Parareal)(cache::PararealCache, problem::AbstractInitialValueProblem; saveiterates::Bool=false, kwargs...)
-    solution = PararealSolution(problem, parareal; saveiterates)
-    parareal(cache, solution, problem; saveiterates, kwargs...)
-    return solution
+function (parareal::Parareal)(
+    solution::PararealSolution, problem::AbstractInitialValueProblem; kwargs...
+)
+    return parareal(PararealCache(problem, parareal), solution, problem; kwargs...)
+end
+function (parareal::Parareal)(
+    problem::AbstractInitialValueProblem; history::Symbol=:none, kwargs...
+)
+    solution = PararealSolution(problem, parareal; history)
+    return parareal(PararealCache(problem, parareal), solution, problem; history, kwargs...)
+end
+function (parareal::Parareal)(
+    cache::PararealCache, problem::AbstractInitialValueProblem; history::Symbol=:none, kwargs...
+)
+    solution = PararealSolution(problem, parareal; history)
+    return parareal(cache, solution, problem; history, kwargs...)
 end

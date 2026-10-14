@@ -1,64 +1,82 @@
 # Execution backends
 
-The Parareal algorithm is written once (`src/parareal/parareal.jl`); a backend supplies only execution primitives, so a fix lands in all four primitive-based backends at once and they cannot drift. Pick one with `mode = "SERIAL" | "THREADS" | "DISTRIBUTED" | "MPI" | "PIPELINED"` or by passing a backend object. The fifth backend, `PipelinedMPIBackend`, is deliberately **not** an adapter but a documented semantic variant with its own loop — see its section below.
+Select with `backend=...`. The string-valued `mode` keyword has been removed.
 
-## SerialBackend (default)
+| Backend | Scheduling | Criteria | History |
+|---|---|---|---|
+| `SerialBackend()` | bulk, calling process | all bulk rules | all |
+| `ThreadsBackend()` | bulk, threads | all bulk rules | all |
+| `DistributedBackend()` | bulk, worker pool | all bulk rules | all |
+| `MPIBackend()` | bulk, MPI ranks | all bulk rules | all |
+| `PipelinedMPIBackend()` | asynchronous frontier | fixed maximum defect, frontier update, no stop | residual/local-count diagnostics |
 
-Everything in the calling task. The reference implementation: the test suite asserts the other backends agree with it **bit for bit**. Also the right choice when the fine solve is too cheap to parallelize.
+Start Julia with `--threads=N` for threads. Adaptive NSDERungeKutta solves keep
+the current step size and history local to each solution, so they do not mutate a
+shared chunk solver. User right-hand sides must likewise avoid shared mutable state.
 
-## ThreadsBackend
-
-Fine chunks over `Threads.@threads :dynamic` in shared memory — the first thing to try on one machine. Start Julia with `--threads=N`.
-
-## DistributedBackend
-
-Fine chunks over `pmap` on the default worker pool (Distributed.jl). The schedule adapts to however many workers exist, so the result does not depend on the worker count. Chunk solutions come back through memory, not disk. Load the packages on the workers first:
+For Distributed, start workers with the same project and load the packages on each:
 
 ```julia
 using Distributed
-addprocs(4)
-@everywhere using NSDETimeParallel, NSDERungeKutta
-solution = solve(problem, parareal; mode = "DISTRIBUTED")
+addprocs(2; exeflags="--project=.")
+@everywhere using NSDERungeKutta, NSDETimeParallel
+solution = solve(problem, parareal; backend=DistributedBackend())
 ```
 
-## MPIBackend
+MPI requires `MPI.Init()` and an SPMD launch. MPI remains a required dependency
+in this release. See `test/mpi/runtests_mpi.jl` for an executable example.
 
-SPMD over MPI ranks, one rank per chunk: boundary values through point-to-point messages, final chunks through a generic gather — all in memory. Needs `MPI.Init()` and `mpiexec`; `test/mpi/runtests_mpi.jl` is a ready-made recipe:
+## Pipeline contract
 
+The pipeline overlaps coarse propagation and fine work, passing a convergence
+frontier from left to right. It does not have a shared current iterate at every
+instant. Consequently `RelativeUpdate`, `MeanRelativeUpdate`, averaged defects,
+and changing secant weights are rejected rather than silently replaced.
+
+Use `WeightedDefect(ϵ=..., p=Inf, weight=FixedWeight(...))` for maximum-defect
+acceptance. A rank waits for the incoming start to freeze before accepting its
+outgoing defect. `FrontierRelativeUpdate(ϵ=...)` explicitly selects the legacy
+relative outgoing-update heuristic. `NoStop()` runs to the budget or diagonal.
+At least `N` ranks are required; surplus ranks take part only in collectives.
+
+`diagnostics.local_sweeps` records each chunk's local iteration count. Global
+fine/coarse call totals include final fine solves needed after a late start update.
+`fine_batches` and `sweeps` are `nothing`. Residuals aggregate ranks active at each
+local iteration index and must not be interpreted as bulk residuals.
+
+Full or interface histories would require additional synchronization and are
+rejected. With `NoStop()` and `K≥N`, the final collected result matches the chunked
+fine reference. For performance comparisons use the matching scheduling model.
+
+Under `MPIBackend`, all ranks receive a residual history trimmed to the completed
+fine-batch count, and `solution.errors === solution.diagnostics.residuals` holds
+on every rank, including zero-batch failures and reused solutions.
+
+The pipelined backend initializes interior starts through its coarse communication
+chain. It does not use `makeGs` overlap guesses from a window driver; only the
+window's initial value is preserved. Use a bulk backend for interior warm starts.
+
+
+## Complete launch examples
+
+`examples/distributed.jl` starts two workers in the active project, loads NSDE on
+each, checks the chunked fine reference, and removes the workers. Load named
+right-hand-side functions on every worker too. Each worker needs access to the
+same package environment and any data used by its right-hand side.
+
+`examples/mpi.jl` runs the bulk backend with one rank per chunk and checks the
+returned histories on every rank. With MPI.jl's compatible launcher installed:
+
+```sh
+mpiexecjl -n 2 julia --project examples/mpi.jl
 ```
-mpiexecjl -n 4 julia --project=@. test/mpi/runtests_mpi.jl
-```
 
-Disk is used only for the opt-in `saveiterates` history under MPI, in a per-run temporary directory by default.
+Launch all ranks into the same project. Both MPI backends require at least `N`
+ranks. Do not run a multi-rank program by starting a single Julia process and
+expecting `MPIBackend()` to create workers. The pipeline is a separate protocol,
+not an interchangeable performance switch; see its supported criteria above.
 
-## PipelinedMPIBackend — a semantic variant
-
-Pipelined (task-scheduled) Parareal over MPI, one rank per chunk, after Aubanel's scheduling (thesis §2.7): there is **no root**. The serial coarse chain is passed rank to rank, and every rank runs its next fine solve *before* blocking on the corrected start from its left neighbour — the fine work hides the serial coarse cost, which is exactly what the root-centric `MPIBackend` cannot do.
-
-The price is stated openly rather than papered over:
-
-- **Frontier convergence, two flavours.** A chunk stops once every chunk to its left has accepted *and* its own per-chunk test passes, or it reaches the finite-termination diagonal. With `ψ = ψ∞` the test is the **certified** weighted defect of thesis §3.4 (`w^(T[1]−T[n+1])‖uold − F(start)‖ ≤ ϵ`, evaluated with the thesis's one-stage lag; acceptance is the prefix conjunction `A_n = A_{n−1} ∧ t_n`, riding the existing messages) — a converged run satisfies `ψ∞ ≤ ϵ`, hence a weighted-max error within `s(θ_F)·ϵ`. The weight must be **preset** (`updatew = true` is rejected: no rank sees all boundaries at a common sweep). With any other ψ the test is relative stagnation of the outgoing boundary, the global ψ is **ignored** (warning unless `ψ₁`) — a shared-budget criterion needs every boundary once per sweep, which re-serialises the pipeline.
-- `solution.errors[k]` records the largest per-chunk test value among chunks still active at sweep `k` — the running restriction of ψ∞ to active chunks, or the largest relative update.
-- `saveiterates` is unsupported: the history would force per-sweep synchronisation.
-
-What is preserved: accepted chunks are fine solves from their accepted starts, so `flatten`, `seams` and all downstream statistics behave identically; and at `ϵ = 0`, `K = N` finite termination makes the result the chunked fine solve, bitwise — the same fixed point as `SerialBackend`, reached by a different route (`test/mpi/runtests_mpi.jl` asserts this).
-
-```
-mpiexecjl -n 4 julia --project=@. test/mpi/runtests_mpi.jl
-```
-
-Use it when the coarse solver is expensive enough that the root's serial chain dominates (`ζN` large); judge its timings against `theoretical_speedup(K, N, ζ; estimate = :aubanel)`, never against the root-centric ceilings.
-
-## Choosing a backend in practice
-
-Everything below is measured, not folklore.
-
-- **The guarantee first: the primitive-based backends change wall time only.** Results are bitwise identical across `SERIAL`, `THREADS`, `DISTRIBUTED` and `MPI` — the test suite enforces it. (`PipelinedMPIBackend` is the documented exception: same fixed point, different convergence semantics — see its section.) Use `SERIAL` for anything whose point is determinism or diagnostics; you lose nothing but time.
-- **Chunk work must dwarf scheduling.** Every sweep pays a fixed per-dispatch cost; if a chunk's fine solve is microseconds, the `THREADS` task spawn — let alone `DISTRIBUTED`'s serialisation — exceeds the work and parallelism slows you down. Measure your machine's dispatch floor with a zero-work probe (a Parareal solve whose fine solver takes one trivial step) before blaming the algorithm.
-- **What limits Parareal is not the barrier.** An embarrassingly parallel workload under the same fork–join machinery scales near-ideally; Parareal's cap is its serial coarse fraction — the `ζN/(1 + ζN)` of the cost model — plus dispatch overhead on small chunks.
-- **`MPIBackend` is SPMD** — one rank per chunk, `MPI.Init()` and `mpiexec` required. It is the wrong tool for interactive work and plotting sweeps; for worker pools over MPI transport driven from a script, use MPIClusterManagers' `MPIWorkerManager` with the `DISTRIBUTED` backend instead — and mind the id mapping: Distributed worker 2 is MPI rank 0.
-- **Pool set-up details that bite:** `addprocs(...; topology = :master_worker)` skips the all-to-all connection set-up the `DISTRIBUTED` backend never uses (noticeable at large pools). On heterogeneous CPUs (Apple silicon P/E cores) a "full" thread pool mixes fast and slow workers, and the slowest chunk sets the sweep time. Physical cores (`Hwloc.num_physical_cores()`), not `Sys.CPU_THREADS`, are the honest pool size for compute-bound chunks.
-
-## Judging speed-ups
-
-Parareal has its own ceiling: [`theoretical_speedup`](@ref)`(K, N, ζ)` for `K` iterations over `N` chunks with a **measured** coarse/fine cost ratio ζ — [`costratio`](@ref) measures it for you on one chunk. Three estimates are available: the work bound (default), the wall-clock bound (`estimate = :wallclock`, for timing benchmarks with a full worker pool), and the Aubanel bound (`estimate = :aubanel`, the comparator for `PipelinedMPIBackend`). Judge real timings against the matching ceiling, never against the serial fine solve wishfully. `benchmark/scaling.jl` and `benchmark/scaling_sweep.jl` produce pool-scaling measurements (speed-up, and efficiency across thread counts); they print measurements, not bounds — the ceilings above are what those curves should be judged against.
+For threaded matrix-heavy workloads, consider `BLAS.set_num_threads(1)` after
+`using LinearAlgebra`, then measure: nested BLAS and chunk parallelism can
+oversubscribe cores. Each chunk must own any mutable scratch storage used by its
+right-hand side. Thread safety is a property of user functions as well as the solver.

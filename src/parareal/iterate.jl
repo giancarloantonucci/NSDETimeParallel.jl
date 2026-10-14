@@ -25,9 +25,8 @@ PararealIterate(problem::AbstractInitialValueProblem, parareal::Parareal)
 
 returns the value of `iterate` at `t` via interpolation of the owning chunk.
 """
-struct PararealIterate{
-            chunks_T<:(AbstractVector{𝕊} where 𝕊<:AbstractInitialValueSolution),
-        } <: AbstractTimeParallelIterate
+struct PararealIterate{chunks_T<:(AbstractVector{𝕊} where 𝕊<:AbstractInitialValueSolution)} <:
+       AbstractTimeParallelIterate
     chunks::chunks_T
 end
 
@@ -37,8 +36,9 @@ function PararealIterate(problem::AbstractInitialValueProblem, parareal::Pararea
     @↓ N = parareal.parameters
     # One representative chunk problem fixes shape and type; every chunk spans
     # the same length, so all chunk solutions are structurally identical.
-    chunkproblem = copy(problem, u0, t0, t0 + (tN - t0) / N)
-    chunks = [NSDEBase.initialize_solution(chunkproblem, finesolver) for _ = 1:N]
+    chunkproblem = remake(problem; u0, tspan=(t0, t0 + (tN - t0) / N))
+    finesolver = chunk_solver(finesolver, (tN - t0) / N)
+    chunks = [NSDEBase.initialize_solution(chunkproblem, finesolver) for _ in 1:N]
     return PararealIterate(chunks)
 end
 
@@ -46,8 +46,8 @@ end
 
 function (iterate::PararealIterate)(tₚ::Real)
     N = length(iterate)
-    for n = 1:N
-        if (n > 1 ? iterate[n-1].t[end] : iterate[n].t[1]) ≤ tₚ < iterate[n].t[end]
+    for n in 1:N
+        if (n > 1 ? iterate[n - 1].t[end] : iterate[n].t[1]) ≤ tₚ < iterate[n].t[end]
             return iterate[n](tₚ)
         end
     end
@@ -85,7 +85,9 @@ Base.getindex(iterate::PararealIterate, n::Integer) = iterate.chunks[n]
 
 stores `value` into the `n`-th chunk of `iterate`.
 """
-Base.setindex!(iterate::PararealIterate, value::AbstractInitialValueSolution, n::Integer) = iterate.chunks[n] = value
+function Base.setindex!(iterate::PararealIterate, value::AbstractInitialValueSolution, n::Integer)
+    return iterate.chunks[n] = value
+end
 
 """
     firstindex(iterate::PararealIterate)
@@ -109,7 +111,9 @@ plus the final chunk's end. These are the points Parareal iterates on — the
 grid every convergence measure ([`Wnorm`](@ref), per-iterate error studies)
 is taken over.
 """
-boundarytimes(iterate::PararealIterate) = [[iterate[n].t[begin] for n = 1:length(iterate)]; iterate[end].t[end]]
+function boundarytimes(iterate::PararealIterate)
+    return [[iterate[n].t[begin] for n in 1:length(iterate)]; iterate[end].t[end]]
+end
 
 """
     boundaryvalues(iterate::PararealIterate)
@@ -119,7 +123,9 @@ state, plus the final chunk's last state — the `U` vector of the Parareal
 iteration, read off the chunk solutions. The returned states ALIAS the chunk
 storage; copy them before mutating.
 """
-boundaryvalues(iterate::PararealIterate) = [[iterate[n].u[begin] for n = 1:length(iterate)]; [iterate[end].u[end]]]
+function boundaryvalues(iterate::PararealIterate)
+    return [[iterate[n].u[begin] for n in 1:length(iterate)]; [iterate[end].u[end]]]
+end
 
 """
     flatten(iterate::PararealIterate)
@@ -134,7 +140,7 @@ solve tolerance. `t` is monotone.
 function flatten(iterate::PararealIterate)
     u = copy(iterate[1].u)
     t = copy(iterate[1].t)
-    for n = 2:length(iterate)
+    for n in 2:length(iterate)
         append!(u, @view iterate[n].u[2:end])
         append!(t, @view iterate[n].t[2:end])
     end
@@ -154,7 +160,9 @@ under the weighted criterion `ψ₂`, late-window seams are unconstrained BY
 DESIGN (the discount forgives them), and only the seam sizes say which regime
 a run actually exercised. Empty for a single-chunk iterate.
 """
-seams(iterate::PararealIterate) = [norm(iterate[n+1].u[begin] - iterate[n].u[end]) for n = 1:length(iterate)-1]
+function seams(iterate::PararealIterate)
+    return [norm(iterate[n + 1].u[begin] - iterate[n].u[end]) for n in 1:(length(iterate) - 1)]
+end
 
 """
     maxseam(iterate::PararealIterate) :: Real
@@ -165,22 +173,53 @@ or `0.0` for a single-chunk iterate.
 maxseam(iterate::PararealIterate) = length(iterate) > 1 ? maximum(seams(iterate)) : 0.0
 
 """
-    Wnorm(iterate::PararealIterate, reference::AbstractInitialValueSolution, w::Number)
+    Wnorm(iterate, reference, weight; base=:time)
 
-weighted distance between `iterate` and a `reference` solution at the chunk
-boundaries.
-
-!!! note
-    `w` here is the **per-chunk** base of the thesis convention (`w = exp(λΔT)`),
-    *not* the per-time base stored in `Weights.w` (`exp(λ)`). The two coincide
-    only when the chunk length is 1.
+Weighted Euclidean distance at the chunk interfaces. `reference` may be a
+solution or the vector returned by `reference(problem, parareal)`. The base
+is per unit time, matching all weight rules. `base=:chunk` explicitly selects
+the per-chunk convention. Supply a scalar or `FixedWeight`; adaptive rule
+objects contain only their initial settings and are refused. To use a measured
+weight, pass `solution.diagnostics.weights[end]`, or call `Wnorm(solution, reference)`.
 """
-function Wnorm(iterate::PararealIterate, reference::AbstractInitialValueSolution, w::Number)
-    N = length(iterate)
+function Wnorm(iterate::PararealIterate, reference, weight; base::Symbol=:time)
+    base in (:time, :chunk) || throw(ArgumentError("base must be :time or :chunk"))
+    weight isa Union{Real,FixedWeight} || throw(
+        ArgumentError(
+            "Wnorm needs a scalar or FixedWeight; use solution.diagnostics.weights[end] for an adaptive rule",
+        ),
+    )
+    w = weight isa Real ? weight : weight.w
+    isfinite(w) && w > 0 || throw(ArgumentError("weight must be finite and positive"))
+    w = max(one(w), w)
     Ts = boundarytimes(iterate)
-    ΔT = Ts[2] - Ts[1] # chunks are uniform by construction (PararealCache)
-    Wₙ(n) = w ^ (-(Ts[n] - Ts[1]) / ΔT) # thesis W_j = w^{-j}, j = n − 1, window-RELATIVE
-    Uₙᵏ(n) = iterate(Ts[n])
-    Uₙ⁺(n) = reference(Ts[n])
-    return norm([Wₙ(n) * (Uₙᵏ(n) - Uₙ⁺(n)) for n = 2:N+1])
+    ΔT = Ts[2] - Ts[1]
+    U = boundaryvalues(iterate)
+    reference isa AbstractVector &&
+        length(reference) != length(U) &&
+        throw(DimensionMismatch("reference must contain N+1 interfaces"))
+    return norm([
+        w^(-(Ts[n] - Ts[1]) / (base === :chunk ? ΔT : 1)) *
+        (U[n] - (reference isa AbstractVector ? reference[n] : reference(Ts[n]))) for
+        n in 2:length(U)
+    ])
+end
+
+# Unsolved chunks must have both defined time spans and explicit missing values,
+# including when a solution buffer still contains an earlier successful run.
+function invalidate_chunks!(iterate::PararealIterate, T, indices)
+    for n in indices
+        invalidate_chunk!(iterate[n], (T[n], T[n + 1]))
+    end
+    return iterate
+end
+
+function invalidate_chunk!(chunk, tspan)
+    resize!(chunk.t, 2)
+    resize!(chunk.u, 2)
+    chunk.t[1], chunk.t[2] = tspan
+    chunk.u[1] = fill!(similar(chunk.u[1]), NaN)
+    chunk.u[2] = copy(chunk.u[1])
+    hasproperty(chunk, :k) && chunk.k !== nothing && empty!(chunk.k)
+    return chunk
 end

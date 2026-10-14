@@ -5,7 +5,12 @@
 
 computes the `solution` of `problem` using `solver`.
 """
-function NSDEBase.solve!(solution::AbstractTimeParallelSolution, problem::AbstractInitialValueProblem, solver::AbstractTimeParallelSolver; kwargs...)
+function NSDEBase.solve!(
+    solution::AbstractTimeParallelSolution,
+    problem::AbstractInitialValueProblem,
+    solver::AbstractTimeParallelSolver;
+    kwargs...,
+)
     return solver(solution, problem; kwargs...)
 end
 
@@ -14,6 +19,8 @@ end
 
 computes the solution of `problem` using `solver`.
 """
-function NSDEBase.solve(problem::AbstractInitialValueProblem, solver::AbstractTimeParallelSolver; kwargs...)
+function NSDEBase.solve(
+    problem::AbstractInitialValueProblem, solver::AbstractTimeParallelSolver; kwargs...
+)
     return solver(problem; kwargs...)
 end

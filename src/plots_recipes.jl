@@ -2,7 +2,7 @@
 
 @recipe function f(iterate::PararealIterate)
     N = length(iterate)
-    for n = 1:N
+    for n in 1:N
         @series begin
             if n != 1
                 label := ""
@@ -24,9 +24,15 @@ end
 @recipe function f(wrapper::NSDEBase._PhasePlot{<:PararealIterate})
     @↓ iterate ← plottable = wrapper
     N = length(iterate)
-    for n = 1:N
+    for n in 1:N
         @series begin
-            label := n != N ? "" : haskey(plotattributes, :label) ? plotattributes[:label] : ""
+            label := if n != 1
+                ""
+            elseif haskey(plotattributes, :label)
+                plotattributes[:label]
+            else
+                ""
+            end
             seriescolor --> 1
             NSDEBase._PhasePlot(iterate[n])
         end
@@ -46,7 +52,9 @@ end
     seriestype --> :path
     xticks --> 0:1000
     yticks --> 10.0 .^ (-100:100)
+    yscale --> :log10
     @↓ solution ← plottable = wrapper
     @↓ errors = solution
-    return errors
+    ks = [k for k in eachindex(errors) if isfinite(errors[k]) && errors[k] > 0]
+    return ks, errors[ks]
 end

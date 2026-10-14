@@ -13,9 +13,8 @@ using LinearAlgebra
 using RecipesBase
 
 include("abstract.jl")
-include("utils.jl")
 include("weights.jl")
-include("tolerance.jl")
+include("criteria.jl")
 include("parareal/parameters.jl")
 include("parareal/constructor.jl")
 include("parareal/cache.jl")
@@ -26,6 +25,7 @@ include("parareal/parareal.jl")
 include("parareal/pipelined.jl")
 include("parareal/solve.jl")
 include("solve.jl")
+include("utils.jl")
 include("plots_recipes.jl")
 
 export AbstractTimeParallelSolver
@@ -37,13 +37,17 @@ export Parareal
 export PararealIterate
 export PararealSolution
 export PararealParameters
-export Tolerance, Weights
+export AbstractCriterion,
+    RelativeUpdate, WeightedDefect, MeanRelativeUpdate, NoStop, FrontierRelativeUpdate
+export AbstractWeightRule, FixedWeight, SecantWeight, NeighbourWeight
+export residual, accept, reference
 
-export ψ₁, ψ₂, ψ∞
+export PararealDiagnostics
 export Wnorm, collect_iterates!, numchunks, numiterates
 export boundarytimes, boundaryvalues, flatten
 export seams, maxseam
-export AbstractPararealBackend, SerialBackend, ThreadsBackend, DistributedBackend, MPIBackend, PipelinedMPIBackend
+export AbstractPararealBackend,
+    SerialBackend, ThreadsBackend, DistributedBackend, MPIBackend, PipelinedMPIBackend
 export theoretical_speedup, costratio
 export iteration_budget, contractionrate
 export shiftwindow!

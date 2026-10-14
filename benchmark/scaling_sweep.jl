@@ -9,13 +9,13 @@
 # find no chunk to take, and is bounded above by the serial coarse+correction.
 using Printf
 
-N       = length(ARGS) ≥ 1 ? parse(Int, ARGS[1]) : 16
-K       = length(ARGS) ≥ 2 ? parse(Int, ARGS[2]) : 4
+N = length(ARGS) ≥ 1 ? parse(Int, ARGS[1]) : 16
+K = length(ARGS) ≥ 2 ? parse(Int, ARGS[2]) : 4
 maxpool = length(ARGS) ≥ 3 ? parse(Int, ARGS[3]) : Sys.CPU_THREADS
 
-script  = joinpath(@__DIR__, "scaling.jl")
+script = joinpath(@__DIR__, "scaling.jl")
 project = dirname(Base.active_project()) # the DIR, not the Project.toml path — child julia needs the folder
-jl      = Base.julia_cmd()[1]
+jl = Base.julia_cmd()[1]
 
 pools = [2^k for k in 0:floor(Int, log2(maxpool))]
 pools[end] == maxpool || push!(pools, maxpool)

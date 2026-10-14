@@ -1,5 +1,24 @@
 # src/parareal/solution.jl
 
+"Run accounting. Bulk-synchronous counts are unavailable (`nothing`) for a pipeline."
+mutable struct PararealDiagnostics{V,T<:Real,E<:AbstractVector}
+    sweeps::Union{Nothing,Int}
+    fine_batches::Union{Nothing,Int}
+    fine_chunk_calls::Int
+    coarse_chunk_calls::Int
+    status::Symbol
+    weights::Vector{T}
+    interfaces::Vector{Vector{V}}
+    initial_starts::Union{Nothing,Vector{V}}
+    residuals::E
+    local_sweeps::Vector{Int}
+end
+function PararealDiagnostics(u0::V, w::T, errors::E) where {V,T<:Real,E<:AbstractVector}
+    return PararealDiagnostics{V,T,E}(
+        0, 0, 0, 0, :not_started, T[], Vector{V}[], nothing, errors, Int[]
+    )
+end
+
 """
     PararealSolution <: AbstractTimeParallelSolution
 
@@ -30,22 +49,38 @@ PararealSolution(problem::AbstractInitialValueProblem, parareal::Parareal)
 returns the value of `solution` at `t` via interpolation.
 """
 mutable struct PararealSolution{
-            lastiterate_T<:PararealIterate,
-            errors_T<:AbstractVector{<:Real},
-            iterates_T<:Union{AbstractVector{<:PararealIterate}, Nothing},
-        } <: AbstractTimeParallelSolution
+    lastiterate_T<:PararealIterate,
+    errors_T<:AbstractVector{<:Real},
+    iterates_T<:Union{AbstractVector{<:PararealIterate},Nothing},
+    diagnostics_T<:PararealDiagnostics,
+} <: AbstractTimeParallelSolution
     lastiterate::lastiterate_T
     errors::errors_T
     iterates::iterates_T
+    diagnostics::diagnostics_T
 end
 
-function PararealSolution(problem::AbstractInitialValueProblem, parareal::Parareal; saveiterates::Bool=false)
+function PararealSolution(lastiterate, errors, iterates=nothing)
+    return PararealSolution(
+        lastiterate, errors, iterates, PararealDiagnostics(lastiterate[1].u[1], 1.0, errors)
+    )
+end
+
+function PararealSolution(
+    problem::AbstractInitialValueProblem, parareal::Parareal; history::Symbol=:none
+)
     lastiterate = PararealIterate(problem, parareal)
     @↓ K = parareal.parameters
-    @↓ ϵ_T ← typeof(ϵ) = parareal.tolerance
+    ϵ_T = typeof(float(threshold(parareal.criterion)))
     errors = Vector{ϵ_T}(undef, K)
-    iterates = saveiterates ? [PararealIterate(problem, parareal) for i in 1:K] : nothing
-    return PararealSolution(lastiterate, errors, iterates)
+    keep, _ = history_options(history)
+    iterates = keep ? [PararealIterate(problem, parareal) for i in 1:K] : nothing
+    return PararealSolution(
+        lastiterate,
+        errors,
+        iterates,
+        PararealDiagnostics(problem.u0, weight_rule(parareal.criterion).w, errors),
+    )
 end
 
 # ---------------------------------- METHODS ----------------------------------
@@ -87,7 +122,9 @@ Base.getindex(solution::PararealSolution, n::Integer) = solution.lastiterate[n]
 
 stores an `AbstractInitialValueSolution` as the `n`-th chunk of the last iteration of a [`PararealSolution`](@ref).
 """
-Base.setindex!(solution::PararealSolution, chunk::AbstractInitialValueSolution, n::Integer) = solution.lastiterate[n] = chunk
+function Base.setindex!(solution::PararealSolution, chunk::AbstractInitialValueSolution, n::Integer)
+    return solution.lastiterate[n] = chunk
+end
 
 """
     firstindex(solution::PararealSolution)
@@ -108,7 +145,9 @@ Base.lastindex(solution::PararealSolution) = lastindex(solution.lastiterate)
 
 returns a [`PararealSolution`](@ref) constructor for the solution of `problem` with `parareal`.
 """
-TimeParallelSolution(problem::AbstractInitialValueProblem, parareal::Parareal) = PararealSolution(problem, parareal)
+function TimeParallelSolution(problem::AbstractInitialValueProblem, parareal::Parareal)
+    return PararealSolution(problem, parareal)
+end
 
 """
     collect_iterates!(solution::PararealSolution; directory)
@@ -118,12 +157,14 @@ reads the per-iterate chunk files written by the MPI backend under
 (`n < k`) are final from earlier iterations and are copied forward.
 """
 function collect_iterates!(solution::PararealSolution; directory::String)
-    solution.iterates isa Nothing && throw(ArgumentError("`collect_iterates!` needs a solution built with `saveiterates = true`."))
-    for k = 1:numiterates(solution)
-        for n = 1:k-1
-            solution.iterates[k][n] = solution.iterates[k-1][n]
+    solution.iterates isa Nothing && throw(
+        ArgumentError("`collect_iterates!` needs a solution built with `history = :iterates`.")
+    )
+    for k in 1:numiterates(solution)
+        for n in 1:(k - 1)
+            solution.iterates[k][n] = solution.iterates[k - 1][n]
         end
-        for n = k:numchunks(solution)
+        for n in k:numchunks(solution)
             filename = joinpath(directory, "iter_$(k)_chunk_$(n).jls")
             if isfile(filename)
                 local_data = open(deserialize, filename, "r")
@@ -157,3 +198,16 @@ seams(solution::PararealSolution) = seams(solution.lastiterate)
 [`maxseam`](@ref) of the last iterate.
 """
 maxseam(solution::PararealSolution) = maxseam(solution.lastiterate)
+
+"""
+    Wnorm(solution::PararealSolution, reference)
+
+Weighted interface error using the last measured per-unit-time weight. A run
+with no finite fine batch has no measured weight and raises `ArgumentError`.
+"""
+function Wnorm(solution::PararealSolution, reference)
+    isempty(solution.diagnostics.weights) && throw(
+        ArgumentError("the run has no measured weight; supply an explicit weight on lastiterate"),
+    )
+    return Wnorm(solution.lastiterate, reference, solution.diagnostics.weights[end])
+end
