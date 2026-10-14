@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 (unreleased)
+## 0.3.0
 
 Requires NSDEBase 0.4; the tests use NSDERungeKutta 0.3.
 
