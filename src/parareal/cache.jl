@@ -31,7 +31,7 @@ mutable struct PararealCache{
     coarsesolver
     weightstate
     F_::U_T
-    duration::Float64
+    duration::Real
     settings
     chunk_failed::Vector{Bool}
 end
@@ -39,7 +39,7 @@ end
 function PararealCache(
     problem::AbstractInitialValueProblem,
     parareal::Parareal;
-    duration=(problem.tspan[2] - problem.tspan[1]) / parareal.parameters.N,
+    duration=chunkduration(problem.tspan..., parareal.parameters.N),
 )
     @↓ u0, (t0, tN) ← tspan = problem
     @↓ finesolver, coarsesolver = parareal
@@ -51,7 +51,7 @@ function PararealCache(
     makeGs = trues(N)
     makeGs[1] = false
 
-    T = [(N - n + 1) / N * t0 + (n - 1) / N * tN for n in 1:(N + 1)] # stable sum
+    T = chunkgrid(t0, tN, N)
 
     # U[1] is a COPY of the initial value, not an alias: window drivers (MoWi)
     # inject fresh starts into U[1] with copyto!, which must never write into
@@ -87,8 +87,8 @@ function PararealCache(
         coarsesolver,
         WeightState(weight_rule(parareal.criterion)),
         [similar(u0) for _ in 1:N],
-        float(duration),
-        (parareal.finesolver, parareal.coarsesolver, float(duration)),
+        gridtime(duration),
+        (parareal.finesolver, parareal.coarsesolver, gridtime(duration)),
         fill(false, N),
     )
 end
@@ -110,11 +110,11 @@ never by poking `cache.T` alone.
 """
 function shiftwindow!(cache::PararealCache, τ0::Real, τN::Real; duration=cache.duration)
     validate_duration(τ0, τN, length(cache.U), duration)
-    cache.duration = duration
+    cache.duration = gridtime(duration)
     @↓ T, chunkproblems = cache
     N = length(chunkproblems)
     for n in 1:(N + 1)
-        T[n] = (N - n + 1) / N * τ0 + (n - 1) / N * τN # stable sum
+        T[n] = gridpoint(gridtime(τ0), gridtime(τN), n, N)
     end
     for n in 1:N
         tspan = (T[n], T[n + 1])
@@ -154,8 +154,8 @@ exactly the same absolute-time chunk grid and schedule as `parareal`.
 function reference(problem::AbstractInitialValueProblem, parareal::Parareal)
     N = parareal.parameters.N
     t0, tN = problem.tspan
-    T = [(N - n + 1) / N * t0 + (n - 1) / N * tN for n in 1:(N + 1)]
-    fine = chunk_solver(parareal.finesolver, (tN - t0) / N)
+    T = chunkgrid(t0, tN, N)
+    fine = chunk_solver(parareal.finesolver, chunkduration(t0, tN, N))
     values = [copy(problem.u0)]
     for n in 1:N
         chunk = remake(problem; u0=copy(values[end]), tspan=(T[n], T[n + 1]))
@@ -174,13 +174,26 @@ that overshoot).
 """
 chunk_endpoint(sol, t) = sol.t[end] == t ? sol.u[end] : sol(t)
 
+# The chunk grid works in at least Float64: a Float32 span is widened and a
+# BigFloat span keeps its precision, so chunk spans and the nominal duration
+# always agree in one number type. For Float64 these are plain arithmetic. The
+# stable sum puts T[1] and T[N + 1] exactly on the endpoints.
+gridtime(t::Real) = convert(promote_type(Float64, float(typeof(t))), t)
+gridpoint(a, b, n, N) = oftype(a, N - n + 1) / N * a + oftype(a, n - 1) / N * b
+function chunkgrid(t0::Real, tN::Real, N::Integer)
+    a, b = gridtime(t0), gridtime(tN)
+    return [gridpoint(a, b, n, N) for n in 1:(N + 1)]
+end
+chunkduration(t0::Real, tN::Real, N::Integer) = (gridtime(tN) - gridtime(t0)) / N
+
 # Construction and window shifts share the same nominal-duration contract.
 function validate_duration(t0, tN, N, duration)
     isfinite(t0) && isfinite(tN) && tN > t0 ||
         throw(ArgumentError("time span must be finite and increasing"))
     isfinite(duration) && duration > 0 ||
         throw(ArgumentError("chunk duration must be finite and positive"))
-    abs((tN - t0) - N * duration) <= 32eps(max(abs(float(t0)), abs(float(tN)), N * duration)) ||
+    a, b, d = gridtime(t0), gridtime(tN), gridtime(duration)
+    abs((b - a) - N * d) <= 32eps(max(abs(a), abs(b), N * d)) ||
         throw(ArgumentError("window span differs from N times the nominal chunk duration"))
     return nothing
 end

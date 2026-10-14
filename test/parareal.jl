@@ -166,3 +166,21 @@ end
         )
     end
 end
+
+@testset "Float32 and BigFloat time spans" begin
+    # The chunk grid is at least Float64, so Float32 spans are widened and
+    # BigFloat spans keep their precision; states keep their element type.
+    for (u0, tspan) in ((Float32[0.3], (0.0f0, 1.0f0)), (BigFloat[0.3], (big"0.0", big"1.0")))
+        p = IVP((u, t) -> u .* (1 .- u), u0, tspan)
+        par = make_parareal(N=4, criterion=NoStop())
+        s = solve(p, par)
+        @test s.diagnostics.status === :exact
+        @test eltype(s[1].u[end]) === eltype(u0)
+        @test boundaryvalues(s.lastiterate) == reference(p, par)
+        # A cache follows the span through shiftwindow!
+        cache = initialize_cache(p, par)
+        shifted = remake(p; tspan=tspan .+ 1)
+        shiftwindow!(cache, shifted.tspan...)
+        @test par(cache, shifted).diagnostics.status === :exact
+    end
+end

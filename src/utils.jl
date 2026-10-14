@@ -172,9 +172,10 @@ function costratio(
     @↓ finesolver, coarsesolver = parareal
     @↓ u0, (t0, tN) ← tspan = problem
     N = parareal.parameters.N
-    chunk = remake(problem; u0, tspan=(t0, t0 + (tN - t0) / N))
-    finesolver = chunk_solver(finesolver, (tN - t0) / N)
-    coarsesolver = chunk_solver(coarsesolver, (tN - t0) / N)
+    duration = chunkduration(t0, tN, N)
+    chunk = remake(problem; u0, tspan=(gridtime(t0), gridtime(t0) + duration))
+    finesolver = chunk_solver(finesolver, duration)
+    coarsesolver = chunk_solver(coarsesolver, duration)
     fcache = initialize_cache(chunk, finesolver)
     gcache = initialize_cache(chunk, coarsesolver)
     fsolution = initialize_solution(chunk, finesolver)

@@ -54,6 +54,9 @@ Requires NSDEBase 0.4; the tests use NSDERungeKutta 0.3.
   storage is shared on every rank.
 - Unsolved nonfinite output is marked NaN, and `remake` preserves unchanged
   parameters.
+- Float32 and BigFloat time spans work: the chunk grid and nominal chunk
+  duration are computed in at least Float64, keeping BigFloat precision, instead
+  of failing with a `MethodError` when the cache is built.
 
 ## 0.2.2 development snapshot
 

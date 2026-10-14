@@ -34,8 +34,9 @@ function PararealIterate(problem::AbstractInitialValueProblem, parareal::Pararea
     @↓ N = parareal.parameters
     # One representative chunk problem fixes shape and type; every chunk spans
     # the same length, so all chunk solutions are structurally identical.
-    chunkproblem = remake(problem; u0, tspan=(t0, t0 + (tN - t0) / N))
-    finesolver = chunk_solver(finesolver, (tN - t0) / N)
+    duration = chunkduration(t0, tN, N)
+    chunkproblem = remake(problem; u0, tspan=(gridtime(t0), gridtime(t0) + duration))
+    finesolver = chunk_solver(finesolver, duration)
     chunks = [NSDEBase.initialize_solution(chunkproblem, finesolver) for _ in 1:N]
     return PararealIterate(chunks)
 end
