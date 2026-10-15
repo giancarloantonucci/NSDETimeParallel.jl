@@ -12,8 +12,9 @@ try
     @assert result.diagnostics.status == :exact
     @assert length(result.errors) == N
     @assert result.errors === result.diagnostics.residuals
-    @assert boundaryvalues(result.lastiterate) == reference(problem, par)
+    # The chunks are collected on the root rank only.
     if MPI.Comm_rank(comm) == 0
+        @assert boundaryvalues(result.lastiterate) == reference(problem, par)
         println((status=result.diagnostics.status, batches=result.diagnostics.fine_batches))
     end
 finally

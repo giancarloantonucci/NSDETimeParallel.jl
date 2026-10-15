@@ -83,6 +83,8 @@ jobs:
           MPI.install_mpiexecjl(destdir=joinpath(pwd(), "mpi-env", "bin"))
       - name: Run the MPI tests
         run: mpi-env/bin/mpiexecjl --project=mpi-env -n 4 julia --color=yes test/mpi/runtests_mpi.jl
+      - name: Run the MPI example
+        run: mpi-env/bin/mpiexecjl --project=mpi-env -n 4 julia --color=yes examples/mpi.jl
 
   format:
     name: JuliaFormatter

@@ -64,8 +64,10 @@ each, checks the chunked fine reference, and removes the workers. Load named
 right-hand-side functions on every worker too. Each worker needs access to the
 same package environment and any data used by its right-hand side.
 
-`examples/mpi.jl` runs the bulk backend with one rank per chunk and checks the
-returned histories on every rank. With MPI.jl's compatible launcher installed:
+`examples/mpi.jl` runs the bulk backend with one rank per chunk, checks the
+returned histories on every rank, and checks the collected result against the
+chunked fine reference on the root rank, where the chunks are gathered. With
+MPI.jl's compatible launcher installed:
 
 ```sh
 mpiexecjl -n 2 julia --project examples/mpi.jl
